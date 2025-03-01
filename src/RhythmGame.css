@@ -1,0 +1,118 @@
+@import url('https://fonts.googleapis.com/css2?family=Honk&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Luckiest+Guy&display=swap');
+
+@font-face {
+    font-family: 'SuperMario256';
+    src: url('./fonts/SuperMario256.ttf') format('truetype');
+    font-weight: normal;
+    font-style: Super Mario;
+}
+
+.game-container {
+    background: white;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    text-align: center;
+    color: black;
+    font-family: 'Luckiest Guy', cursive;
+}
+
+.game-title {
+    font-family: 'SuperMario256', cursive;
+    font-size: 4rem;
+    margin-bottom: 20px;
+}
+
+.square-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    width: 100px;
+    height: 100px;
+}
+
+.big-square {
+    width: 100px;
+    height: 100px;
+    border-radius: 5%;
+    border: 5px solid black;
+    background: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+.small-square {
+    position: absolute;
+    border-radius: 5%;
+    background: #ffe062;
+    width: 0%;
+    height: 0%;
+    animation: growShrink 3s infinite ease-in-out;
+}
+
+/* Animates the small square growing and shrinking smoothly */
+@keyframes growShrink {
+    0% {
+        width: 0%;
+        height: 0%;
+        background: #ffe062;
+    }
+    50% {
+        width: 100%;
+        height: 100%;
+        background: #0099ff;
+    }
+    100% {
+        width: 0%;
+        height: 0%;
+        background: #ffe062;        
+    }
+}
+
+.game-message {
+    font-size: 2.5rem;
+    margin-top: 20px;
+}
+
+/* Score section */
+.score-title {
+    font-size: 1.8rem;
+    margin-top: 10px;
+    margin-bottom: 5px;
+}
+
+.score-list {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+}
+
+.score-item {
+    font-size: 1.5rem;
+    margin: 5px 0;
+}
+
+/* Exit button */
+.exit-button {
+    padding: 12px 24px;
+    background: #ffcc00;
+    color: black;
+    border: 3px solid black;
+    border-radius: 8px;
+    font-family: 'Luckiest Guy', cursive;
+    font-size: 1.5rem;
+    cursor: pointer;
+    transition: 0.3s;
+    margin-top: 20px;
+}
+
+.exit-button:hover {
+    background: #0099ff;
+    transform: scale(1.1);
+}

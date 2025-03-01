@@ -1,52 +1,91 @@
 import React, { useState, useEffect, useRef } from 'react';
+import './RhythmGame.css';
 
-const BEAT_INTERVAL = 800; // ms per beat (120 BPM)
-const HIT_WINDOW = 150; // timing window in ms
+const BEAT_INTERVAL = 3000; // Full grow-shrink cycle (3 seconds)
+const HIT_TIME = 1500; // Peak of animation (small square fully grown)
+const HIT_WINDOW = 100; // Acceptable hit margin (100ms before/after peak)
 
-const RhythmGame = () => {
+const RhythmGame = ({ players, onExit }) => {
   const [message, setMessage] = useState('');
-  const beatRef = useRef(null);
+  const [scores, setScores] = useState(players.map(() => 0));
+
   const lastBeatTime = useRef(Date.now());
+  const beatRef = useRef(null);
+  const missTimeoutRef = useRef(null);
+  const hasPressedRef = useRef(false); // Tracks if a key was pressed during the current beat
 
   useEffect(() => {
-    beatRef.current = setInterval(() => {
-      lastBeatTime.current = Date.now();
-      flashBeat();
-    }, BEAT_INTERVAL);
-
+    startBeat();
     window.addEventListener('keydown', handleKeyDown);
 
     return () => {
       clearInterval(beatRef.current);
+      clearTimeout(missTimeoutRef.current);
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, []);
 
-  const flashBeat = () => {
-    setMessage('Beat!');
-    setTimeout(() => setMessage(''), 100);
+  const startBeat = () => {
+    beatRef.current = setInterval(() => {
+      // Do not clear the message here; we want it to persist from previous beats.
+      lastBeatTime.current = Date.now();
+      hasPressedRef.current = false;
+
+      // Clear any existing miss timeout and start a new one for the full beat.
+      clearTimeout(missTimeoutRef.current);
+      missTimeoutRef.current = setTimeout(() => {
+        if (!hasPressedRef.current) {
+          setMessage('Miss');
+        }
+      }, BEAT_INTERVAL);
+    }, BEAT_INTERVAL);
   };
 
-  const handleKeyDown = (event) => {
+  const handleKeyDown = () => {
     const now = Date.now();
-    const diff = Math.abs(now - lastBeatTime.current);
+    const timeSinceLastBeat = now - lastBeatTime.current;
+    let scoreUpdate = 0;
+    let feedback = 'Miss';
 
-    if (diff <= HIT_WINDOW) {
-      setMessage('Perfect!');
-    } else if (diff <= HIT_WINDOW * 2) {
-      setMessage('Good');
-    } else {
-      setMessage('Miss');
+    if (Math.abs(timeSinceLastBeat - HIT_TIME) <= HIT_WINDOW) {
+      scoreUpdate = 2;
+      feedback = 'Perfect!';
+    } else if (Math.abs(timeSinceLastBeat - HIT_TIME) <= HIT_WINDOW * 2) {
+      scoreUpdate = 1;
+      feedback = 'Good';
     }
+
+    // Set the message based on key press timing.
+    setMessage(feedback);
+    setScores((prevScores) =>
+      prevScores.map((score, i) => score + (i === 0 ? scoreUpdate : 0))
+    );
+
+    // Mark that a key has been pressed and cancel the miss timeout.
+    hasPressedRef.current = true;
+    clearTimeout(missTimeoutRef.current);
   };
 
   return (
-    <div className="flex flex-col items-center justify-center h-screen bg-gray-900 text-white">
-      <h1 className="text-5xl font-bold mb-6">Rhythm Game</h1>
-      <div className="text-3xl">
-        <div>Press any key on the beat!</div>
-        {message}
+    <div className="game-container">
+      <h1 className="game-title">Play</h1>
+      <div className="square-container">
+        <div className="big-square">
+          <div className="small-square"></div>
+        </div>
       </div>
+      <div className="game-message">{message}</div>
+      <h2 className="score-title">Scores:</h2>
+      <ul className="score-list">
+        {players.map((player, index) => (
+          <li key={index} className="score-item">
+            {player}: {scores[index]}
+          </li>
+        ))}
+      </ul>
+      <button onClick={onExit} className="exit-button">
+        Exit to Home
+      </button>
     </div>
   );
 };
