@@ -1,11 +1,11 @@
-@import url('https://fonts.googleapis.com/css2?family=Honk&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Honk&display=swap'); 
 @import url('https://fonts.googleapis.com/css2?family=Luckiest+Guy&display=swap');
 
 @font-face {
     font-family: 'SuperMario256';
     src: url('./fonts/SuperMario256.ttf') format('truetype');
     font-weight: normal;
-    font-style: Super Mario;
+    font-style: normal;
 }
 
 .game-container {
@@ -18,6 +18,7 @@
     text-align: center;
     color: black;
     font-family: 'Luckiest Guy', cursive;
+    position: relative;
 }
 
 .game-title {
@@ -56,7 +57,6 @@
     animation: growShrink 3s infinite ease-in-out;
 }
 
-/* Animates the small square growing and shrinking smoothly */
 @keyframes growShrink {
     0% {
         width: 0%;
@@ -80,22 +80,90 @@
     margin-top: 20px;
 }
 
-/* Score section */
-.score-title {
-    font-size: 1.8rem;
-    margin-top: 10px;
-    margin-bottom: 5px;
+/* Leaderboard in top-right corner */
+.leaderboard {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background: white;
+    border: 4px solid black;
+    padding: 10px;
+    border-radius: 10px;
+    font-family: 'Luckiest Guy', cursive;
+    text-align: center;
+    box-shadow: 5px 5px 0 black;
 }
 
-.score-list {
-    list-style-type: none;
-    padding: 0;
-    margin: 0;
-}
-
-.score-item {
+.leaderboard h2 {
     font-size: 1.5rem;
-    margin: 5px 0;
+    margin-bottom: 10px;
+}
+
+.leaderboard table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.leaderboard th, .leaderboard td {
+    border: 2px solid black;
+    padding: 5px 10px;
+    font-size: 1.2rem;
+}
+
+/* Final Leaderboard Popup */
+.final-leaderboard {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.popup {
+    background: white;
+    border: 4px solid black;
+    padding: 20px;
+    border-radius: 10px;
+    text-align: center;
+    box-shadow: 5px 5px 0 black;
+}
+
+.popup h2 {
+    font-size: 2rem;
+    margin-bottom: 10px;
+}
+
+.popup table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.popup th, .popup td {
+    border: 2px solid black;
+    padding: 5px 10px;
+    font-size: 1.5rem;
+}
+
+.popup button {
+    margin-top: 15px;
+    padding: 10px 20px;
+    background: #ffcc00;
+    color: black;
+    border: 3px solid black;
+    border-radius: 8px;
+    font-family: 'Luckiest Guy', cursive;
+    font-size: 1.5rem;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.popup button:hover {
+    background: #0099ff;
+    transform: scale(1.1);
 }
 
 /* Exit button */
