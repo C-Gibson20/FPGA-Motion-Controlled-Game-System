@@ -54,7 +54,7 @@
     background: #ffe062;
     width: 0%;
     height: 0%;
-    animation: growShrink 3s infinite ease-in-out;
+    animation: growShrink var(--beat-interval, 3s) infinite ease-in-out; 
 }
 
 @keyframes growShrink {

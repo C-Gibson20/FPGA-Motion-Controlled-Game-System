@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './RhythmGame.css';
 
-const BEAT_INTERVAL = 3000; // Full animation cycle
-const HIT_TIME = 1500; // Peak of animation 
-const HIT_WINDOW = 100; // Acceptable hit margin 
+const DEFAULT_BEAT_INTERVAL = 3000;
+const SPEED_UP_BEAT_INTERVAL = 2000;
+const HIT_WINDOW = 100;
 
-const RhythmGame = ({ players, onExit }) => {
+const RhythmGame = ({ players, modifier, onExit }) => {
   const [message, setMessage] = useState('');
   const [scores, setScores] = useState(players.map(() => 0));
   const [showFinalLeaderboard, setShowFinalLeaderboard] = useState(false);
@@ -13,7 +13,24 @@ const RhythmGame = ({ players, onExit }) => {
   const lastBeatTime = useRef(Date.now());
   const beatRef = useRef(null);
   const missTimeoutRef = useRef(null);
-  const hasPressedRef = useRef(false); 
+  const hasPressedRef = useRef(false);
+
+  // Determine beat interval using a switch statement
+  let beatInterval;
+  switch (modifier) {
+    case 'speed-up':
+      beatInterval = SPEED_UP_BEAT_INTERVAL;
+      break;
+    default:
+      beatInterval = DEFAULT_BEAT_INTERVAL;
+  }
+
+  const hitTime = beatInterval / 2; // Compute dynamically
+
+  // Update CSS variable for animation timing
+  useEffect(() => {
+    document.documentElement.style.setProperty('--beat-interval', `${beatInterval}ms`);
+  }, [beatInterval]);
 
   useEffect(() => {
     startBeat();
@@ -24,7 +41,7 @@ const RhythmGame = ({ players, onExit }) => {
       clearTimeout(missTimeoutRef.current);
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, []);
+  }, [beatInterval]); // Re-run if beatInterval changes
 
   const startBeat = () => {
     beatRef.current = setInterval(() => {
@@ -36,8 +53,8 @@ const RhythmGame = ({ players, onExit }) => {
         if (!hasPressedRef.current) {
           setMessage('Miss');
         }
-      }, BEAT_INTERVAL);
-    }, BEAT_INTERVAL);
+      }, beatInterval);
+    }, beatInterval);
   };
 
   const handleKeyDown = () => {
@@ -46,10 +63,10 @@ const RhythmGame = ({ players, onExit }) => {
     let scoreUpdate = 0;
     let feedback = 'Miss';
 
-    if (Math.abs(timeSinceLastBeat - HIT_TIME) <= HIT_WINDOW) {
+    if (Math.abs(timeSinceLastBeat - hitTime) <= HIT_WINDOW) {
       scoreUpdate = 2;
       feedback = 'Perfect!';
-    } else if (Math.abs(timeSinceLastBeat - HIT_TIME) <= HIT_WINDOW * 2) {
+    } else if (Math.abs(timeSinceLastBeat - hitTime) <= HIT_WINDOW * 2) {
       scoreUpdate = 1;
       feedback = 'Good';
     }
@@ -76,7 +93,7 @@ const RhythmGame = ({ players, onExit }) => {
         </div>
       </div>
       <div className="game-message">{message}</div>
-      
+
       {/* Leaderboard in top-right corner */}
       <div className="leaderboard">
         <h2>Leaderboard</h2>
@@ -97,9 +114,11 @@ const RhythmGame = ({ players, onExit }) => {
           </tbody>
         </table>
       </div>
-      
-      <button onClick={handleExit} className="exit-button">Exit to Home</button>
-      
+
+      <button onClick={handleExit} className="exit-button">
+        Exit to Home
+      </button>
+
       {/* Final Leaderboard Popup */}
       {showFinalLeaderboard && (
         <div className="final-leaderboard">
