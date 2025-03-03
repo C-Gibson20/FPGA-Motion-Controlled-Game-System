@@ -1,18 +1,36 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './RhythmGame.css';
 
-const BEAT_INTERVAL = 3000; // Full grow-shrink cycle (3 seconds)
-const HIT_TIME = 1500; // Peak of animation (small square fully grown)
-const HIT_WINDOW = 100; // Acceptable hit margin (100ms before/after peak)
+const DEFAULT_BEAT_INTERVAL = 3000;
+const SPEED_UP_BEAT_INTERVAL = 2000;
+const HIT_WINDOW = 100;
 
-const RhythmGame = ({ players, onExit }) => {
+const RhythmGame = ({ players, modifier, onExit }) => {
   const [message, setMessage] = useState('');
   const [scores, setScores] = useState(players.map(() => 0));
+  const [showFinalLeaderboard, setShowFinalLeaderboard] = useState(false);
 
   const lastBeatTime = useRef(Date.now());
   const beatRef = useRef(null);
   const missTimeoutRef = useRef(null);
-  const hasPressedRef = useRef(false); // Tracks if a key was pressed during the current beat
+  const hasPressedRef = useRef(false);
+
+  // Determine beat interval using a switch statement
+  let beatInterval;
+  switch (modifier) {
+    case 'speed-up':
+      beatInterval = SPEED_UP_BEAT_INTERVAL;
+      break;
+    default:
+      beatInterval = DEFAULT_BEAT_INTERVAL;
+  }
+
+  const hitTime = beatInterval / 2; // Compute dynamically
+
+  // Update CSS variable for animation timing
+  useEffect(() => {
+    document.documentElement.style.setProperty('--beat-interval', `${beatInterval}ms`);
+  }, [beatInterval]);
 
   useEffect(() => {
     startBeat();
@@ -23,22 +41,20 @@ const RhythmGame = ({ players, onExit }) => {
       clearTimeout(missTimeoutRef.current);
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, []);
+  }, [beatInterval]); // Re-run if beatInterval changes
 
   const startBeat = () => {
     beatRef.current = setInterval(() => {
-      // Do not clear the message here; we want it to persist from previous beats.
       lastBeatTime.current = Date.now();
       hasPressedRef.current = false;
 
-      // Clear any existing miss timeout and start a new one for the full beat.
       clearTimeout(missTimeoutRef.current);
       missTimeoutRef.current = setTimeout(() => {
         if (!hasPressedRef.current) {
           setMessage('Miss');
         }
-      }, BEAT_INTERVAL);
-    }, BEAT_INTERVAL);
+      }, beatInterval);
+    }, beatInterval);
   };
 
   const handleKeyDown = () => {
@@ -47,23 +63,25 @@ const RhythmGame = ({ players, onExit }) => {
     let scoreUpdate = 0;
     let feedback = 'Miss';
 
-    if (Math.abs(timeSinceLastBeat - HIT_TIME) <= HIT_WINDOW) {
+    if (Math.abs(timeSinceLastBeat - hitTime) <= HIT_WINDOW) {
       scoreUpdate = 2;
       feedback = 'Perfect!';
-    } else if (Math.abs(timeSinceLastBeat - HIT_TIME) <= HIT_WINDOW * 2) {
+    } else if (Math.abs(timeSinceLastBeat - hitTime) <= HIT_WINDOW * 2) {
       scoreUpdate = 1;
       feedback = 'Good';
     }
 
-    // Set the message based on key press timing.
     setMessage(feedback);
     setScores((prevScores) =>
       prevScores.map((score, i) => score + (i === 0 ? scoreUpdate : 0))
     );
 
-    // Mark that a key has been pressed and cancel the miss timeout.
     hasPressedRef.current = true;
     clearTimeout(missTimeoutRef.current);
+  };
+
+  const handleExit = () => {
+    setShowFinalLeaderboard(true);
   };
 
   return (
@@ -75,17 +93,57 @@ const RhythmGame = ({ players, onExit }) => {
         </div>
       </div>
       <div className="game-message">{message}</div>
-      <h2 className="score-title">Scores:</h2>
-      <ul className="score-list">
-        {players.map((player, index) => (
-          <li key={index} className="score-item">
-            {player}: {scores[index]}
-          </li>
-        ))}
-      </ul>
-      <button onClick={onExit} className="exit-button">
+
+      {/* Leaderboard in top-right corner */}
+      <div className="leaderboard">
+        <h2>Leaderboard</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Player</th>
+              <th>Score</th>
+            </tr>
+          </thead>
+          <tbody>
+            {players.map((player, index) => (
+              <tr key={index}>
+                <td>{player}</td>
+                <td>{scores[index]}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <button onClick={handleExit} className="exit-button">
         Exit to Home
       </button>
+
+      {/* Final Leaderboard Popup */}
+      {showFinalLeaderboard && (
+        <div className="final-leaderboard">
+          <div className="popup">
+            <h2>Final Leaderboard</h2>
+            <table>
+              <thead>
+                <tr>
+                  <th>Player</th>
+                  <th>Score</th>
+                </tr>
+              </thead>
+              <tbody>
+                {players.map((player, index) => (
+                  <tr key={index}>
+                    <td>{player}</td>
+                    <td>{scores[index]}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <button onClick={onExit}>Return to Menu</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
