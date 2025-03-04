@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+  import React, { useState, useEffect, useRef } from 'react';
 import './RhythmGame.css';
 
 const BEAT_INTERVAL = 3000; // Full grow-shrink cycle (3 seconds)
@@ -66,6 +66,16 @@ const RhythmGame = ({ players, onExit }) => {
     clearTimeout(missTimeoutRef.current);
   };
 
+  useEffect(() => {
+    fetch("http://localhost:5001/users").then(r => r.json()).then(scores => setScores(_ => scores))
+
+    return () => {
+      clearInterval(beatRef.current);
+      clearTimeout(missTimeoutRef.current);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
+
   return (
     <div className="game-container">
       <h1 className="game-title">Play</h1>
@@ -77,9 +87,9 @@ const RhythmGame = ({ players, onExit }) => {
       <div className="game-message">{message}</div>
       <h2 className="score-title">Scores:</h2>
       <ul className="score-list">
-        {players.map((player, index) => (
-          <li key={index} className="score-item">
-            {player}: {scores[index]}
+        {scores.map(score => (
+          <li key={score.username} className="score-item">
+            {score.username}: {score.score}
           </li>
         ))}
       </ul>
