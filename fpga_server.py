@@ -38,7 +38,7 @@ while True:
 
                 # Decode and print the message received from the client
                 cmsg = cmsg.decode().strip()
-                print(f"Received from FPGA: {cmsg}")
+                print(cmsg)
 
 
     except ConnectionResetError:
