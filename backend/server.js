@@ -25,9 +25,9 @@ app.get("/", (req, res) => {
     res.send("API is running");
 });
 
-app.get("/users", async (req, res) => {
+app.get("/scores", async (req, res) => {
     try{
-        const result = await pool.query("SELECT * FROM testscores");
+        const result = await pool.query("SELECT * FROM testscores ORDER BY score DESC");
         res.json(result.rows);
     } catch (err){
         console.error(err.message);

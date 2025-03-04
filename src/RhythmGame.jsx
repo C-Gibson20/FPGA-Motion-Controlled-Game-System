@@ -1,5 +1,6 @@
   import React, { useState, useEffect, useRef } from 'react';
 import './RhythmGame.css';
+import axios from 'axios';
 
 const DEFAULT_BEAT_INTERVAL = 3000;
 const SPEED_UP_BEAT_INTERVAL = 2000;
@@ -8,6 +9,7 @@ const HIT_WINDOW = 100;
 const RhythmGame = ({ players, modifier, onExit }) => {
   const [message, setMessage] = useState('');
   const [scores, setScores] = useState(players.map(() => 0));
+  const [data, setData] = useState([]);
   const [showFinalLeaderboard, setShowFinalLeaderboard] = useState(false);
 
   const lastBeatTime = useRef(Date.now());
@@ -42,6 +44,12 @@ const RhythmGame = ({ players, modifier, onExit }) => {
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, [beatInterval]); // Re-run if beatInterval changes
+
+  useEffect(() => {
+    axios.get('http://localhost:5001/scores')
+        .then(response => setData(response.data))
+        .catch(error => console.error('Error fetching data:', error));
+}, []);
 
   const startBeat = () => {
     beatRef.current = setInterval(() => {
@@ -100,15 +108,17 @@ const RhythmGame = ({ players, modifier, onExit }) => {
         <table>
           <thead>
             <tr>
+              <th>Rank</th>
               <th>Player</th>
               <th>Score</th>
             </tr>
           </thead>
           <tbody>
-            {players.map((player, index) => (
+            {data.map((entry, index) => (
               <tr key={index}>
-                <td>{player}</td>
-                <td>{scores[index]}</td>
+                <td>{index + 1}</td>
+                <td>{entry.username}</td>
+                <td>{entry.score}</td>
               </tr>
             ))}
           </tbody>
@@ -127,15 +137,17 @@ const RhythmGame = ({ players, modifier, onExit }) => {
             <table>
               <thead>
                 <tr>
+                  <th>Rank</th>
                   <th>Player</th>
                   <th>Score</th>
                 </tr>
               </thead>
               <tbody>
-                {players.map((player, index) => (
+                {data.map((entry, index) => (
                   <tr key={index}>
-                    <td>{player}</td>
-                    <td>{scores[index]}</td>
+                    <td>{index + 1}</td>
+                    <td>{entry.username}</td>
+                    <td>{entry.score}</td>
                   </tr>
                 ))}
               </tbody>
