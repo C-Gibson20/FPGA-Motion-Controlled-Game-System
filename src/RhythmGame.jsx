@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+  import React, { useState, useEffect, useRef } from 'react';
 import './RhythmGame.css';
 
 const DEFAULT_BEAT_INTERVAL = 3000;
