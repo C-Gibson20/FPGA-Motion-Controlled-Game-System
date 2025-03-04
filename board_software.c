@@ -72,7 +72,9 @@ static void button_isr(void *context, alt_u32 id)
          Main Function
 -----------------------------*/
 int main() {
-    alt_32 x_read;  // Variable to store the accelerometer reading
+    alt_32 y_read;  // Variable to store the accelerometer reading
+    int last_y_read = 0;
+    int delta;
 
     printf("FIR Filtering Enabled - Starting accelerometer processing...\n");
 
@@ -100,8 +102,12 @@ int main() {
 
     while (1) {
         if (processing) {
-            alt_up_accelerometer_spi_read_x_axis(acc_dev, &x_read);
-            printf("A %d\n", (int)x_read);
+            alt_up_accelerometer_spi_read_y_axis(acc_dev, &y_read);
+            delta = abs(last_y_read - (int)y_read);
+            if (delta > 25 ){
+            	last_y_read = (int)y_read;
+            	printf("A %d\n", delta);
+            }
         }
 
         alt_u8 button_state = button_flags;
