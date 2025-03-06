@@ -1,20 +1,10 @@
-#!/usr/bin/env python3
-import sys
 import time
 import socket
-import intel_jtag_uart
+import random 
 
 # AWS Server Details
 AWS_IP = "13.61.26.147"
 AWS_PORT = 12000
-
-def send_command(command, ju):
-    try:
-        cmd = command + "\n"
-        ju.write(cmd.encode("utf-8"))
-        print(f"Sent command to FPGA: {command}")
-    except Exception as e:
-        print(f"Error sending command to FPGA: {e}")
 
 def send_to_server(client_socket, msg):
     try:
@@ -22,32 +12,25 @@ def send_to_server(client_socket, msg):
     except Exception as e:
         print(f"Error sending data to server: {e}")
 
-def start_processing(ju, client_socket):
+def start_processing(client_socket):
     # Tell FPGA to start processing
-    send_command("S", ju)
 
     processing = True
     while processing:
-        try:
-            # Read data from FPGA (this should return measurements when processing)
-            data = ju.read()
-            if data:
-                text = data.decode("utf-8", errors="ignore").strip()
-                if text:
-                    print(f"FPGA {text}")
-                    send_to_server(client_socket, text)
+        number = random.randint(0, 100)
+    
+        # Simulate encoding it as bytes (like receiving from FPGA)
+        encoded_data = str(number).encode("utf-8")
+        
+        # Decode it the same way as your original command
+        text = encoded_data.decode("utf-8", errors="ignore").strip()
 
-        except Exception as e:
-            print("Error during processing:", e)
-            break
+        print(f"FPGA {text}")
+        send_to_server(client_socket, text)
+        time.sleep(1)
+
 
 def main():
-
-    try:
-        ju = intel_jtag_uart.intel_jtag_uart()
-    except Exception as e:
-        print("Error opening JTAG UART:", e)
-        sys.exit(1)
 
     print("FPGA client running, waiting for AWS instructions...")
 
@@ -68,7 +51,7 @@ def main():
 
             print(f"Received command from AWS: {command}")
             if command == "S":
-                start_processing(ju, client_socket)
+                start_processing(client_socket)
             else:
                 print("Unknown command received, ignoring.")
 

@@ -1,4 +1,4 @@
-  import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import './RhythmGame.css';
 import axios from 'axios';
 
@@ -6,7 +6,7 @@ const DEFAULT_BEAT_INTERVAL = 3000;
 const SPEED_UP_BEAT_INTERVAL = 2000;
 const HIT_WINDOW = 100;
 
-const RhythmGame = ({ players, modifier, onExit }) => {
+const RhythmGame = ({ players, modifier, ws, onExit }) => {
   const [message, setMessage] = useState('');
   const [scores, setScores] = useState(players.map(() => 0));
   const [data, setData] = useState([]);
@@ -17,7 +17,6 @@ const RhythmGame = ({ players, modifier, onExit }) => {
   const missTimeoutRef = useRef(null);
   const hasPressedRef = useRef(false);
 
-  // Determine beat interval using a switch statement
   let beatInterval;
   switch (modifier) {
     case 'speed-up':
@@ -27,9 +26,8 @@ const RhythmGame = ({ players, modifier, onExit }) => {
       beatInterval = DEFAULT_BEAT_INTERVAL;
   }
 
-  const hitTime = beatInterval / 2; // Compute dynamically
+  const hitTime = beatInterval / 2;
 
-  // Update CSS variable for animation timing
   useEffect(() => {
     document.documentElement.style.setProperty('--beat-interval', `${beatInterval}ms`);
   }, [beatInterval]);
@@ -37,25 +35,52 @@ const RhythmGame = ({ players, modifier, onExit }) => {
   useEffect(() => {
     startBeat();
     window.addEventListener('keydown', handleKeyDown);
-
     return () => {
       clearInterval(beatRef.current);
       clearTimeout(missTimeoutRef.current);
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [beatInterval]); // Re-run if beatInterval changes
+  }, [beatInterval]);
 
   useEffect(() => {
     axios.get('http://localhost:5001/scores')
         .then(response => setData(response.data))
         .catch(error => console.error('Error fetching data:', error));
-}, []);
+  }, []);
+
+  useEffect(() => {
+    if (ws) {
+      const messageHandler = (event) => {
+        console.log("RhythmGame received message:", event.data);
+        try {
+          const payload = JSON.parse(event.data);
+          if (payload.type === 'data') {
+            if (payload.button) {
+              console.log("triggerHit is being called due to FPGA button press");
+              triggerHit();
+            } else {
+              console.log("Received S data:", payload.data);
+            }
+          }
+        } catch (err) {
+          console.error("Error parsing message:", err);
+        }
+      };
+  
+      ws.addEventListener("message", messageHandler);
+  
+      return () => {
+        ws.removeEventListener("message", messageHandler);
+      };
+    }
+  }, [ws]);
+  
+  
 
   const startBeat = () => {
     beatRef.current = setInterval(() => {
       lastBeatTime.current = Date.now();
       hasPressedRef.current = false;
-
       clearTimeout(missTimeoutRef.current);
       missTimeoutRef.current = setTimeout(() => {
         if (!hasPressedRef.current) {
@@ -65,7 +90,8 @@ const RhythmGame = ({ players, modifier, onExit }) => {
     }, beatInterval);
   };
 
-  const handleKeyDown = () => {
+  const triggerHit = () => {
+    console.log("triggerHit called");
     const now = Date.now();
     const timeSinceLastBeat = now - lastBeatTime.current;
     let scoreUpdate = 0;
@@ -88,6 +114,13 @@ const RhythmGame = ({ players, modifier, onExit }) => {
     clearTimeout(missTimeoutRef.current);
   };
 
+  const handleKeyDown = (e) => {
+    // If you want to restrict to the space key:
+    if (e.key === ' ') {
+      triggerHit();
+    }
+  };
+
   const handleExit = () => {
     setShowFinalLeaderboard(true);
   };
@@ -101,8 +134,6 @@ const RhythmGame = ({ players, modifier, onExit }) => {
         </div>
       </div>
       <div className="game-message">{message}</div>
-
-      {/* Leaderboard in top-right corner */}
       <div className="leaderboard">
         <h2>Leaderboard</h2>
         <table>
@@ -124,12 +155,9 @@ const RhythmGame = ({ players, modifier, onExit }) => {
           </tbody>
         </table>
       </div>
-
       <button onClick={handleExit} className="exit-button">
         Exit to Home
       </button>
-
-      {/* Final Leaderboard Popup */}
       {showFinalLeaderboard && (
         <div className="final-leaderboard">
           <div className="popup">

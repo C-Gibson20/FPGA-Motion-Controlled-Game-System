@@ -15,21 +15,17 @@ function Root() {
   const [modifier, setModifier] = useState(null);
   const [modifierPage, setModifierPage] = useState(false);
   const [showPopup, setShowPopup] = useState(false);
-  const [bothPlayersConnected, setBothPlayersConnected] = useState(false);
-
-  useEffect(() => {
-    if (players.length === 2) {
-      setShowPopup(true);
-    }
-  }, [players]);
+  const [wsInstance, setWsInstance] = useState(null);
 
   return (
     <StrictMode>
       <div className="container">
         {!gameStarted && !modifierPage && !showPopup ? (
           <Menu
-            onStart={(selectedPlayers) => {
+            onStart={(selectedPlayers, ws) => {
               setPlayers(selectedPlayers);
+              setWsInstance(ws);
+              // For example, if 2 players are connected, show popup.
               if (selectedPlayers.length === 2) {
                 setShowPopup(true);
               } else {
@@ -48,6 +44,7 @@ function Root() {
           <RhythmGame
             players={players}
             modifier={modifier}
+            ws={wsInstance}  // pass the same ws instance
             onExit={() => {
               setGameStarted(false);
               setModifierPage(false);
@@ -58,7 +55,7 @@ function Root() {
         {showPopup && (
           <ConnectionPopup
             onPlayersConnected={() => {
-              setBothPlayersConnected(true);
+              // ...
             }}
             onClose={() => {
               setShowPopup(false);
@@ -70,5 +67,6 @@ function Root() {
     </StrictMode>
   );
 }
+
 
 createRoot(document.getElementById("root")).render(<Root />);
