@@ -9,20 +9,28 @@
     font-style: Super Mario;
 }
 
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overflow: hidden; /* Prevents scrolling */
+}
+
 .menu-container {
-  background: url('./assets/Game_Background_2.jpg');
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-  background-color: black;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100vh;
-  text-align: center;
-  color: white;
-  font-family: 'Luckiest Guy';
+background: url('./assets/Game_Background_2.jpg') no-repeat center center fixed;
+background-size: cover;
+background-color: black;
+
+display: flex;
+flex-direction: column;
+align-items: center;
+justify-content: center;
+
+width: 100vw;
+height: 100vh; /* Full screen height */
+text-align: center;
+color: white;
+font-family: 'Luckiest Guy';
 }
 
 .title span:nth-child(1) { color: #ff0400; border: 3px white; }

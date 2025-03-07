@@ -29,11 +29,11 @@ def start_processing(client_socket):
         if (time.time() - start_time >= 5):
             encoded_data = str(1).encode("utf-8")
             text = encoded_data.decode("utf-8", errors="ignore").strip()
-            command = f"C {text}"
+            command = f"B {text}"
             print(command)
             start_time = time.time()
         else:
-            command = f"S {text}"
+            command = f"A {text}"
             print(command)
 
         send_to_server(client_socket, command)
