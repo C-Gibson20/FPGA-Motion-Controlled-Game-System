@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './RhythmGame.css';
 import axios from 'axios';
+import Scene from './Scene.jsx';
 
 const DEFAULT_BEAT_INTERVAL = 3000;
 const SPEED_UP_BEAT_INTERVAL = 2000;
@@ -114,48 +115,20 @@ const RhythmGame = ({ players, modifier, ws, onExit }) => {
     clearTimeout(missTimeoutRef.current);
   };
 
-  const handleKeyDown = (e) => {
-    // If you want to restrict to the space key:
-    if (e.key === ' ') {
-      triggerHit();
-    }
-  };
-
-  const handleExit = () => {
-    setShowFinalLeaderboard(true);
-  };
+// <div className="game-message">{message}</div>
+//       <h2 className="score-title">Scores:</h2>
+//       <ul className="score-list">
+//         {players.map((player, index) => (
+//           <li key={index} className="score-item">
+//             {player}: {scores[index]}
+//           </li>
+//         ))}
+            // </ul>
 
   return (
     <div className="game-container">
-      <h1 className="game-title">Play</h1>
-      <div className="square-container">
-        <div className="big-square">
-          <div className="small-square"></div>
-        </div>
-      </div>
-      <div className="game-message">{message}</div>
-      <div className="leaderboard">
-        <h2>Leaderboard</h2>
-        <table>
-          <thead>
-            <tr>
-              <th>Rank</th>
-              <th>Player</th>
-              <th>Score</th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.map((entry, index) => (
-              <tr key={index}>
-                <td>{index + 1}</td>
-                <td>{entry.username}</td>
-                <td>{entry.score}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      <button onClick={handleExit} className="exit-button">
+            <Scene />
+      <button onClick={onExit} className="exit-button">
         Exit to Home
       </button>
       {showFinalLeaderboard && (
