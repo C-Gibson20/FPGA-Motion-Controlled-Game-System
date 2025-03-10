@@ -21,17 +21,20 @@ const Background = () => {
 };
 
 const Player = ({ username, isPlayerPlayer, model, initialPosition }) => {
-  const[currentModel, setCurrentModel] = useState("MarioIdle");
-  const playerRef = useRef();
+  const [currentModel, setCurrentModel] = useState("MarioIdle");
+  const groupRef = useRef(); // This group will maintain the consistent location
+  const playerRef = useRef(); // Reference for the model primitive if needed
 
   const modelData = MODELS[currentModel];
   const { scene, animations } = useGLTF(modelData.path);
   const { scene: idleScene, animations: idleAnimations } = useGLTF(MODELS.MarioIdle.path);
   const { scene: jumpScene, animations: jumpAnimations } = useGLTF(MODELS.MarioJump.path);
   const { scene: sideStepScene, animations: sideStepAnimations } = useGLTF(MODELS.MarioSideStep.path);
-  const { actions: idleActions } = useAnimations(idleAnimations, playerRef);
-  const { actions: jumpActions } = useAnimations(jumpAnimations, playerRef);
-  const { actions: sideStepActions } = useAnimations(sideStepAnimations, playerRef);
+
+  const { actions: idleActions } = useAnimations(idleAnimations, groupRef);
+  const { actions: jumpActions } = useAnimations(jumpAnimations, groupRef);
+  const { actions: sideStepActions } = useAnimations(sideStepAnimations, groupRef);
+
   const velocityY = useRef(0);
   const speed = 0.05;
   const jumpStrength = 0.07; // Jump height
@@ -74,33 +77,35 @@ const Player = ({ username, isPlayerPlayer, model, initialPosition }) => {
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
     };
-  }, []);
+  }, [isPlayerPlayer]);
 
-  // use keyboard for now
   useFrame(() => {
-    if (!isPlayerPlayer || !playerRef.current) {
+    if (!isPlayerPlayer || !groupRef.current) {
       return;
     }
 
+    // Update the group's position so the new model stays in the same location
     if (keys.current.ArrowUp) {
-      playerRef.current.position.y += speed;
+      groupRef.current.position.y += speed;
     }
     if (keys.current.ArrowDown) {
-      playerRef.current.position.y -= speed;
+      groupRef.current.position.y -= speed;
     }
     if (keys.current.ArrowLeft) {
-      playerRef.current.position.x -= speed;
+      groupRef.current.position.x -= speed;
+      setCurrentModel("MarioSideStep");
     }
     if (keys.current.ArrowRight) {
-      playerRef.current.position.x += speed;
+      groupRef.current.position.x += speed;
+      setCurrentModel("MarioSideStep");
     }
 
     if (isJumping.current) {
-      playerRef.current.position.y += velocityY.current;
+      groupRef.current.position.y += velocityY.current;
       velocityY.current -= gravity;
 
-      if (playerRef.current.position.y <= initialPosition[1]) {
-        playerRef.current.position.y = initialPosition[1];
+      if (groupRef.current.position.y <= initialPosition[1]) {
+        groupRef.current.position.y = initialPosition[1];
         isJumping.current = false;
         velocityY.current = 0;
         setCurrentModel("MarioIdle");
@@ -108,22 +113,30 @@ const Player = ({ username, isPlayerPlayer, model, initialPosition }) => {
     }
   });
 
-
   useEffect(() => {
+    // Stop all animations
     idleActions["mixamo.com"]?.stop();
     jumpActions["mixamo.com"]?.stop();
     sideStepActions["mixamo.com"]?.stop();
+
+    // Start the current model's animation
     if (currentModel === "MarioIdle") {
       idleActions["mixamo.com"]?.play();
     } else if (currentModel === "MarioJump") {
       jumpActions["mixamo.com"]?.play();
-    } else if(currentModel === "MarioSideStep") {
+    } else if (currentModel === "MarioSideStep") {
       sideStepActions["mixamo.com"]?.play();
     }
-  }, [currentModel])
+  }, [currentModel, idleActions, jumpActions, sideStepActions]);
 
-  return <primitive ref={playerRef} object={scene} position={initialPosition} scale={modelData.scale} />;
+  return (
+    <group ref={groupRef} position={initialPosition}>
+      {/* The primitive model is attached to the group */}
+      <primitive ref={playerRef} object={scene} scale={modelData.scale} />
+    </group>
+  );
 };
+
 
 const Scoreboard = ({ players }) => {
   return (
