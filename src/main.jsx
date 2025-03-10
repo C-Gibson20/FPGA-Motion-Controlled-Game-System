@@ -4,6 +4,7 @@ import "./index.css";
 import Menu from "./Menu.jsx";
 import ModifierPage from "./ModifierPage.jsx";
 import RhythmGame from "./RhythmGame.jsx";
+import Minigame2 from "./Minigame2.jsx";
 import ConnectionPopup from "./ConnectionPopup.jsx";
 import "./Menu.css";
 import "./RhythmGame.css";
@@ -19,7 +20,7 @@ function Root() {
 
   return (
     <StrictMode>
-      <RhythmGame
+      <Minigame2  
             players={players}
             modifier={modifier}
             ws={wsInstance}  // pass the same ws instance
@@ -28,6 +29,16 @@ function Root() {
               setModifierPage(false);
             }}
           />
+
+          {/* <RhythmGame
+            players={players}
+            modifier={modifier}
+            ws={wsInstance}  // pass the same ws instance
+            onExit={() => {
+              setGameStarted(false);
+              setModifierPage(false);
+            }}
+          /> */}
       {/* <div className="container">
         {!gameStarted && !modifierPage && !showPopup ? (
           <Menu

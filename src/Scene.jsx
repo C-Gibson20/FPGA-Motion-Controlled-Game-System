@@ -3,6 +3,7 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { useGLTF, useTexture, useAnimations } from "@react-three/drei";
 import Server from "./server";
 import CoinSpawner from "./CoinSpawner";
+import SpikeBall from "./SpikeBall";
 
 const MODELS = {
   MarioIdle: { path: "/models/MarioIdle.glb", scale: 0.003 },
@@ -213,6 +214,7 @@ const Scene = () => {
         ))}
 
         <CoinSpawner startPositions={updatedPlayers.map(p => p.position)} />
+        <SpikeBall />
 
       </Canvas>
     </div>
