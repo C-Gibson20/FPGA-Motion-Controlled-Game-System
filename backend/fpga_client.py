@@ -18,21 +18,20 @@ def start_processing(client_socket):
     processing = True
     start_time = time.time()
     while processing:
-        number = random.randint(0, 100)
-    
-        # Simulate encoding it as bytes (like receiving from FPGA)
-        encoded_data = str(number).encode("utf-8")
-        
-        # Decode it the same way as your original command
-        text = encoded_data.decode("utf-8", errors="ignore").strip()
 
         if (time.time() - start_time >= 5):
-            encoded_data = str(1).encode("utf-8")
+            number = random.randint(1, 2)
+            encoded_data = str(number).encode("utf-8")
             text = encoded_data.decode("utf-8", errors="ignore").strip()
+
             command = f"B {text}"
             print(command)
             start_time = time.time()
         else:
+            number = random.randint(0, 100)
+            encoded_data = str(number).encode("utf-8")            
+            text = encoded_data.decode("utf-8", errors="ignore").strip()
+
             command = f"A {text}"
             print(command)
 
