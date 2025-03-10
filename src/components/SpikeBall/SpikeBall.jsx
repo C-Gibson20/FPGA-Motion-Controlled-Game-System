@@ -47,7 +47,7 @@ const SmokeTrail = ({ followRef }) => {
 
 // SpikeBall Component
 const SpikeBall = ({
-  position = [0.65, -0.35, 1.5],
+  position = [0.65, -0.35 , 0],
   onFire = () => {},
   playerRef,
   onCollision = () => {},
@@ -77,38 +77,36 @@ const SpikeBall = ({
 
   useFrame((_, delta) => {
     if (!groupRef.current || !playerRef?.current || !spikeBallRef.current) return;
-
-    const ball = groupRef.current;
-
-    // Move spike ball
+  
+    // Move the spike ball along the x-axis.
     posX.current -= delta * 0.8;
-    if (posX.current < -1.5) {
-      posX.current = 1.5;
-      hasScoredThisCycle.current = false; // Reset
+    if (posX.current < -2) {
+      posX.current = 2;
+      hasScoredThisCycle.current = false; // Reset for a new cycle.
     }
-
-    ball.position.x = posX.current;
-
-    // Get world positions for accurate collision detection
+    groupRef.current.position.x = posX.current;
+  
+    // Get world positions of the spike ball and the player.
     const spikePos = new THREE.Vector3();
     spikeBallRef.current.getWorldPosition(spikePos);
-
+    spikePos.y += 0.35 
+  
     const playerPos = new THREE.Vector3();
     playerRef.current.getWorldPosition(playerPos);
-
-    const distance = Math.abs(playerPos.y - spikePos.y);
-    // console.log("Distance:", distance);
-
-    if (!hasScoredThisCycle.current) {
-      if (distance > 0.1) {
-        onCollision();
-        hasScoredThisCycle.current = true;
-      } else if (spikePos.x < playerPos.x) {
-        onSafePass();
-        hasScoredThisCycle.current = true;
-      }
+    playerPos.y += 0.7
+  
+    // Use the full Euclidean distance for collision detection.
+    const collisionThreshold = 0.4; // Adjust based on your model sizes.
+    if (playerPos.distanceTo(spikePos) < collisionThreshold && !hasScoredThisCycle.current) {
+      onCollision();
+      hasScoredThisCycle.current = true;
+    } else if (spikePos.x < playerPos.x && !hasScoredThisCycle.current) {
+      // The spike ball has passed the player without colliding.
+      onSafePass();
+      hasScoredThisCycle.current = true;
     }
   });
+  
 
   if (!clone) return null;
 

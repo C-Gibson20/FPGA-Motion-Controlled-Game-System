@@ -27,10 +27,6 @@ const SpikeBallGame = () => {
   const [lives, setLives] = useState(1);
   const controlledPlayerRef = useRef();
 
-  const handleCoinCollect = () => {
-    setScore((prev) => prev + 1);
-  };
-
   const handleSpikeCollision = () => {
     setLives((prev) => Math.max(prev - 1, 0));
     console.log("💥 Collision! Lives:", lives - 1);
