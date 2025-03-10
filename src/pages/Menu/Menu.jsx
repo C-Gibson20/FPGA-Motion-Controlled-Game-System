@@ -108,9 +108,13 @@ const Menu = ({ onStart }) => {
           className="input-field"
         />
       ))}
+      {numPlayers > 1 ?
       <button onClick={handleStartConnection} className="start-button">
         Connect to Players
       </button>
+      : <button onClick={handleGameStart} className="start-button">
+        Play Solo
+      </button>}
       {showPopup && (
         <ConnectionPopup
           isConnected={isConnected}
