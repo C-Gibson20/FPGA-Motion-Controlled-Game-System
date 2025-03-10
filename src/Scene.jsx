@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { useGLTF, useTexture } from "@react-three/drei";
+import { useGLTF, useTexture, useAnimations } from "@react-three/drei";
 import Server from "./server";
 import * as THREE from "three";
 
 const MODELS = {
-  Mario: { path: "/models/Mario.glb", scale: 0.25 },
+  Mario: { path: "/models/Mario.glb", scale: 0.3 },
   Luigi: { path: "/models/Luigi.glb", scale: 1.5 },
 };
 
@@ -22,8 +22,9 @@ const Background = () => {
 
 const Player = ({ username, isPlayerPlayer, model, initialPosition }) => {
   const modelData = MODELS[model] || MODELS.Mario;
-  const { scene } = useGLTF(modelData.path);
+  const { scene, animations } = useGLTF(modelData.path);
   const playerRef = useRef();
+  const { actions } = useAnimations(animations, playerRef);
 
   const speed = 0.05;
   const jumpStrength = 0.1; // Jump height
@@ -79,8 +80,11 @@ const Player = ({ username, isPlayerPlayer, model, initialPosition }) => {
       return;
     }
 
+    let ArrowUpJump = false;
+
     if (keys.current.ArrowUp) {
       playerRef.current.position.y += speed;
+      ArrowUpJump = true;
     }
     if (keys.current.ArrowDown) {
       playerRef.current.position.y -= speed;
