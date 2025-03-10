@@ -21,7 +21,16 @@ function Root() {
 
   return (
     <StrictMode>
-      <CoinGame/>
+      <RhythmGame
+            players={players}
+            modifier={modifier}
+            ws={wsInstance}  // pass the same ws instance
+            onExit={() => {
+              setGameStarted(false);
+              setModifierPage(false);
+            }}
+          />
+      {/* <CoinGame/> */}
       {/* <Minigame2  
             players={players}
             modifier={modifier}
