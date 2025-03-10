@@ -2,9 +2,9 @@ import React, { useState, useEffect, useRef } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { useGLTF, useTexture, useAnimations } from "@react-three/drei";
 import Player from "../Player/Player.jsx";
-import CoinSpawner from "./CoinSpawner.jsx"; // Your coin spawner component
 import Scoreboard from "../../pages/RythmGame/Scoreboard.jsx";
 import * as THREE from "three";
+import SpikeBall from "./SpikeBall.jsx";
 // import './Scene.css';
 
 const Background = () => {
@@ -22,62 +22,59 @@ const Background = () => {
   return null;
 };
 
-// This wrapper ensures that all its children are forced to layer 0 every frame.
-const CoinLayerGroup = ({ children, layer = 0 }) => {
-  const groupRef = useRef();
-  useFrame(() => {
-    if (groupRef.current) {
-      groupRef.current.traverse((child) => {
-        child.layers.set(layer);
-      });
-    }
-  });
-  return <group ref={groupRef}>{children}</group>;
-};
-
-const CoinGame = () => {
+const SpikeBallGame = () => {
   const [score, setScore] = useState(0);
+  const [lives, setLives] = useState(3);
   const controlledPlayerRef = useRef();
 
-  // Called when a coin is collected.
   const handleCoinCollect = () => {
-    setScore((prevScore) => prevScore + 1);
+    setScore((prev) => prev + 1);
+  };
+
+  const handleSpikeCollision = () => {
+    setLives((prev) => Math.max(prev - 1, 0));
+    console.log("💥 Collision! Lives:", lives - 1);
+  };
+
+  const handleSpikePass = () => {
+    setScore((prev) => prev + 1);
+    console.log("✅ Safe! Score:", score + 1);
   };
 
   const playerData = { username: "Player", position: [0, -0.7, 0] };
 
   return (
     <div style={{ width: "100vw", height: "100vh", position: "relative" }}>
-      <Scoreboard players={[{ username: playerData.username, score }]} />
+      <Scoreboard
+        players={[{ username: playerData.username, score }]}
+        lives={lives}
+      />
       <Canvas
         shadows
         camera={{ position: [0, 0, 10], fov: 10 }}
         onCreated={({ camera }) => {
-          // Enable both layer 0 (for coins) and layer 1 (for the player and its light)
           camera.layers.enable(0);
           camera.layers.enable(1);
           camera.layers.enable(2);
         }}
       >
         <Background />
-        {/* Remove global lights */}
+        <directionalLight castShadow intensity={1} position={[5, 5, 5]} />
         <Player
           username={playerData.username}
           initialPosition={playerData.position}
           isPlayerPlayer={true}
           playerRef={controlledPlayerRef}
         />
-        {/* Wrap CoinSpawner so that its coins are forced to layer 0 */}
-        <CoinLayerGroup layer={2}>
-          <CoinSpawner
-            startPositions={[playerData.position, playerData.position]}
-            playerRef={controlledPlayerRef}
-            onCoinCollect={handleCoinCollect}
-          />
-        </CoinLayerGroup>
+        <SpikeBall
+          playerRef={controlledPlayerRef}
+          onCollision={() => setLives((l) => Math.max(l - 1, 0))}
+          onSafePass={() => setScore((s) => s + 1)}
+        />
       </Canvas>
     </div>
   );
 };
 
-export default CoinGame;
+
+export default SpikeBallGame;
