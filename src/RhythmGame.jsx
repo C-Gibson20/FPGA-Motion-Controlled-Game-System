@@ -18,6 +18,12 @@ const RhythmGame = ({ players, modifier, ws, onExit }) => {
   const missTimeoutRef = useRef(null);
   const hasPressedRef = useRef(false);
 
+  // Commands from the fpga
+  const [jumpLow, setJumpLow] = useState(false);
+  const [left, setLeft] = useState(false);
+  const [right, setRight] = useState(false);
+  const [still, setStill] = useState(false);
+
   let beatInterval;
   switch (modifier) {
     case 'speed-up':
@@ -63,26 +69,37 @@ const RhythmGame = ({ players, modifier, ws, onExit }) => {
           const payload = JSON.parse(event.data);
           if (payload.type === 'data') {
             if (payload.button) {
-              console.log("triggerHit is being called due to FPGA button press");
               triggerHit();
-            } else {
-              console.log("Received S data:", payload.data);
+            } else if (payload.jump) {
+              setJumpLow(true);
+              setTimeout(() => setJumpLow(false), 500);
+            } else if (payload.left) {
+              setLeft(true);
+              setRight(false);
+              setStill(false);
+            } else if (payload.right) {
+              setRight(true);
+              setLeft(false);
+              setStill(false);
+            } else if (payload.still) {
+              setStill(true);
+              setLeft(false);
+              setRight(false);
             }
           }
         } catch (err) {
           console.error("Error parsing message:", err);
         }
       };
-  
+
       ws.addEventListener("message", messageHandler);
-  
+
       return () => {
         ws.removeEventListener("message", messageHandler);
       };
     }
   }, [ws]);
-  
-  
+
 
   const startBeat = () => {
     beatRef.current = setInterval(() => {
@@ -133,7 +150,7 @@ const RhythmGame = ({ players, modifier, ws, onExit }) => {
 
   return (
     <div className="game-container">
-            <Scene />
+            <Scene jumpLow={jumpLow} left={left} right={right} still={still} />
       <button onClick={onExit} className="exit-button">
         Exit to Home
       </button>

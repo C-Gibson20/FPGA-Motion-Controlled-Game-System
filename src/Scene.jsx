@@ -20,7 +20,7 @@ const Background = () => {
   return null;
 };
 
-const Player = ({ username, isPlayerPlayer, model, initialPosition }) => {
+const Player = ({ username, isPlayerPlayer, model, initialPosition, jumpLow, left, right, still }) => {
   const[currentModel, setCurrentModel] = useState("MarioIdle");
   const playerRef = useRef();
 
@@ -33,7 +33,7 @@ const Player = ({ username, isPlayerPlayer, model, initialPosition }) => {
   const { actions: jumpActions } = useAnimations(jumpAnimations, playerRef);
   const { actions: sideStepActions } = useAnimations(sideStepAnimations, playerRef);
   const velocityY = useRef(0);
-  const speed = 0.05;
+  const speed = 0.01;
   const jumpStrength = 0.07; // Jump height
   const gravity = 0.004; // Gravity effect
   const isJumping = useRef(false);
@@ -46,10 +46,19 @@ const Player = ({ username, isPlayerPlayer, model, initialPosition }) => {
   });
 
   useEffect(() => {
+    if (jumpLow && !isJumping.current) {
+      console.log("Jumping due to WebSocket event!");
+      isJumping.current = true;
+      velocityY.current = jumpStrength;
+      setCurrentModel("MarioJump");
+    }
+  }, [jumpLow]);
+  
+  useEffect(() => {
     if (!isPlayerPlayer) {
       return;
     }
-
+  
     const handleKeyDown = (e) => {
       if (keys.current[e.key] !== undefined) {
         keys.current[e.key] = true;
@@ -60,21 +69,23 @@ const Player = ({ username, isPlayerPlayer, model, initialPosition }) => {
         setCurrentModel("MarioJump");
       }
     };
-
+  
     const handleKeyUp = (e) => {
       if (keys.current[e.key] !== undefined) {
         keys.current[e.key] = false;
       }
     };
-
+  
     window.addEventListener("keydown", handleKeyDown);
     window.addEventListener("keyup", handleKeyUp);
-
+  
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
     };
   }, []);
+  
+
 
   // use keyboard for now
   useFrame(() => {
@@ -88,10 +99,10 @@ const Player = ({ username, isPlayerPlayer, model, initialPosition }) => {
     if (keys.current.ArrowDown) {
       playerRef.current.position.y -= speed;
     }
-    if (keys.current.ArrowLeft) {
+    if (left) {
       playerRef.current.position.x -= speed;
     }
-    if (keys.current.ArrowRight) {
+    if (right) {
       playerRef.current.position.x += speed;
     }
 
@@ -151,7 +162,7 @@ const Scoreboard = ({ players }) => {
 
 const FETCH_INTERVAL = 1000
 
-const Scene = () => {
+const Scene = ({ jumpLow, left, right, still }) => {
   const [players, setPlayers] = useState([]);
   
 
@@ -186,7 +197,11 @@ const Scene = () => {
               username={player.username}
               model={player.model}
               initialPosition={[xPos, -0.7, 0]}
-              isPlayerPlayer={player.username == "John"} // what logic do we have to determine who is who? frontend seems to be multiplayer rn
+              isPlayerPlayer={player.username === "John"} // Ensure this is correct
+              jumpLow={jumpLow} // Pass jumpLow prop
+              left={left}
+              right={right}
+              still={still}
             />
           );
         })}

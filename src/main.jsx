@@ -19,16 +19,7 @@ function Root() {
 
   return (
     <StrictMode>
-      <RhythmGame
-            players={players}
-            modifier={modifier}
-            ws={wsInstance}  // pass the same ws instance
-            onExit={() => {
-              setGameStarted(false);
-              setModifierPage(false);
-            }}
-          />
-      {/* <div className="container">
+      {<div className="container">
         {!gameStarted && !modifierPage && !showPopup ? (
           <Menu
             onStart={(selectedPlayers, ws) => {
@@ -72,7 +63,7 @@ function Root() {
             }}
           />
         )}
-      </div> */}
+      </div>}
     </StrictMode>
   );
 }
