@@ -79,38 +79,49 @@ const Player = ({ username, isPlayerPlayer, model, initialPosition, playerRef })
     }, [isPlayerPlayer]);
 
     useFrame(() => {
-        if (!isPlayerPlayer || !groupRef.current) {
-        return;
-        }
-
-        // Update the group's position so the new model stays in the same location
+        if (!isPlayerPlayer || !groupRef.current) return;
+    
+        let moving = false;
+    
+        // Handle movement
         if (keys.current.ArrowUp) {
-        groupRef.current.position.y += speed;
+            groupRef.current.position.y += speed;
+            moving = true;
         }
         if (keys.current.ArrowDown) {
-        groupRef.current.position.y -= speed;
+            groupRef.current.position.y -= speed;
+            moving = true;
         }
         if (keys.current.ArrowLeft) {
-        groupRef.current.position.x -= speed;
-        setCurrentModel("MarioSideStep");
+            groupRef.current.position.x -= speed;
+            if (currentModel !== "MarioSideStep") setCurrentModel("MarioSideStep");
+            moving = true;
         }
         if (keys.current.ArrowRight) {
-        groupRef.current.position.x += speed;
-        setCurrentModel("MarioSideStep");
+            groupRef.current.position.x += speed;
+            if (currentModel !== "MarioSideStep") setCurrentModel("MarioSideStep");
+            moving = true;
         }
-
+    
+        // Handle jumping
         if (isJumping.current) {
-        groupRef.current.position.y += velocityY.current;
-        velocityY.current -= gravity;
-
-        if (groupRef.current.position.y <= initialPosition[1]) {
-            groupRef.current.position.y = initialPosition[1];
-            isJumping.current = false;
-            velocityY.current = 0;
+            groupRef.current.position.y += velocityY.current;
+            velocityY.current -= gravity;
+    
+            if (groupRef.current.position.y <= initialPosition[1]) {
+                groupRef.current.position.y = initialPosition[1];
+                isJumping.current = false;
+                velocityY.current = 0;
+                setCurrentModel("MarioIdle"); // Reset to idle only after jump ends
+            }
+        }
+    
+        // If no movement keys are pressed, return to Idle
+        if (!moving && !isJumping.current && currentModel !== "MarioIdle") {
             setCurrentModel("MarioIdle");
         }
-        }
     });
+    
 
     useEffect(() => {
         // Stop all animations

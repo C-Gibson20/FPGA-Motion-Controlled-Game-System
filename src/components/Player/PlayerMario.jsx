@@ -114,19 +114,28 @@ const PlayerMario = ({ username, isPlayerPlayer, model, initialPosition, playerR
 
     useEffect(() => {
         // Stop all animations
-        idleActions["mixamo.com"]?.stop();
-        jumpActions["mixamo.com"]?.stop();
-        sideStepActions["mixamo.com"]?.stop();
-
-        // Start the current model's animation
+        Object.values(idleActions).forEach((action) => action.stop());
+        Object.values(jumpActions).forEach((action) => action.stop());
+        Object.values(sideStepActions).forEach((action) => action.stop());
+    
+        let action;
+    
+        // Use the correct animation
         if (currentModel === "MarioIdle") {
-        idleActions["mixamo.com"]?.play();
+            action = idleActions["mixamo.com"];
         } else if (currentModel === "MarioJump") {
-        jumpActions["mixamo.com"]?.play();
+            action = jumpActions["mixamo.com"];
         } else if (currentModel === "MarioSideStep") {
-        sideStepActions["mixamo.com"]?.play();
+            action = sideStepActions["mixamo.com"];
         }
+    
+        if (action) {
+            action.reset().fadeIn(0.2).play();
+            action.setLoop(THREE.LoopRepeat, Infinity); // Ensure animations loop
+        }
+    
     }, [currentModel, idleActions, jumpActions, sideStepActions]);
+    
 
     return (
         <group ref={groupRef} position={initialPosition}>
