@@ -6,6 +6,8 @@ import './Scene.css';
 import {playBackgroundSound, playJumpSound} from "./Sounds";
 import CoinSpawner from "./CoinSpawner";
 
+import * as THREE from "three";
+
 const MODELS = {
   MarioIdle: { path: "/models/MarioIdle.glb", scale: 0.003 },
   MarioJump: { path: "/models/MarioJump.glb", scale: 0.003 },
@@ -13,7 +15,12 @@ const MODELS = {
 };
 
 const Background = () => {
-  const texture = useTexture("/images/background.png");
+  const texture = useTexture("/images/background2.png");
+
+  // Ensure correct color encoding
+  texture.encoding = THREE.sRGBEncoding;
+  texture.colorSpace = THREE.SRGBColorSpace;
+
   const { scene } = useThree();
 
   useEffect(() => {
