@@ -4,7 +4,7 @@ import "./index.css";
 import Menu from "./pages/Menu/Menu.jsx";
 import ModifierPage from "./pages/ModifierPage/ModifierPage.jsx";
 import RhythmGame from "./pages/RythmGame/RhythmGame.jsx";
-// import Minigame2 from "./pages/MiniGames/Minigame2.jsx";
+import SpikeBallGame from "./components/SpikeBall/SpikeBallGame.jsx";
 import ConnectionPopup from "./pages/ConnexionPopup/ConnectionPopup.jsx";
 import CoinGame from "./components/Coin/CoinGame.jsx";
 import "./pages/Menu/Menu.css";
@@ -21,17 +21,8 @@ function Root() {
 
   return (
     <StrictMode>
-      {/* <RhythmGame
-            players={players}
-            modifier={modifier}
-            ws={wsInstance}  // pass the same ws instance
-            onExit={() => {
-              setGameStarted(false);
-              setModifierPage(false);
-            }}
-          /> */}
-      {<CoinGame/>}
-      {/* <Minigame2  
+      {<SpikeBallGame />}
+      {/* <SpikeBallGame  
             players={players}
             modifier={modifier}
             ws={wsInstance}  // pass the same ws instance

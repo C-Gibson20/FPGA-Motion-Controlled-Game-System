@@ -8,7 +8,7 @@ import CoinSpawner from "../../components/Coin/CoinSpawner";
 // import Player from "./Player";
 // import Scoreboard from "./Scoreboard";
 import * as THREE from "three";
-import SpikeBall from "./SpikeBall";
+// import SpikeBall from "./SpikeBall";
 
 const MODELS = {
   MarioIdle: { path: "/models/MarioIdle.glb", scale: 0.003 },
