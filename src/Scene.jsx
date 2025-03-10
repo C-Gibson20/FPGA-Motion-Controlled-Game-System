@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { useGLTF, useTexture, useAnimations } from "@react-three/drei";
 import Server from "./server";
+import CoinSpawner from "./CoinSpawner";
 
 const MODELS = {
   MarioIdle: { path: "/models/MarioIdle.glb", scale: 0.003 },
@@ -49,9 +50,7 @@ const Player = ({ username, isPlayerPlayer, model, initialPosition }) => {
   });
 
   useEffect(() => {
-    if (!isPlayerPlayer) {
-      return;
-    }
+    if (!isPlayerPlayer) return;
 
     const handleKeyDown = (e) => {
       if (keys.current[e.key] !== undefined) {
@@ -67,6 +66,12 @@ const Player = ({ username, isPlayerPlayer, model, initialPosition }) => {
     const handleKeyUp = (e) => {
       if (keys.current[e.key] !== undefined) {
         keys.current[e.key] = false;
+      }
+      if (e.key === " ") {
+        if (!isJumping.current) {
+          isJumping.current = true;
+          velocityY.current = jumpStrength;
+        }
       }
     };
 
@@ -162,11 +167,10 @@ const Scoreboard = ({ players }) => {
   );
 };
 
-const FETCH_INTERVAL = 1000
+const FETCH_INTERVAL = 1000;
 
 const Scene = () => {
   const [players, setPlayers] = useState([]);
-  
 
   useEffect(() => {
     const fetchPlayers = () => setPlayers(Server.getPlayerInfo());
@@ -174,6 +178,19 @@ const Scene = () => {
     const interval = setInterval(fetchPlayers, FETCH_INTERVAL);
     return () => clearInterval(interval);
   }, []);
+
+  // Update players with positions
+  const updatedPlayers = players.map((player, index) => {
+    const totalPlayers = players.length;
+    const spacing = 10 / Math.max(1, totalPlayers);
+    let xPos = -3 + index * spacing;
+    xPos = xPos * 0.3;
+
+    return {
+      ...player,
+      position: [xPos, -0.7, 0], // attach position for CoinSpawner
+    };
+  });
 
   return (
     <div style={{ width: "100vw", height: "100vh", overflow: "hidden", position: "relative" }}>
@@ -185,24 +202,18 @@ const Scene = () => {
         <ambientLight intensity={4} />
         <directionalLight position={[10, 10, 5]} castShadow />
 
-        {players.map((player, index) => {
-          // spread players evenely
+        {updatedPlayers.map((player) => (
+          <Player
+            key={player.username}
+            username={player.username}
+            model={player.model}
+            initialPosition={player.position}
+            isPlayerPlayer={player.username === "John"}
+          />
+        ))}
 
-          const totalPlayers = players.length;
-          const spacing = 10 / Math.max(1, totalPlayers);
-          let xPos = -3 + index * spacing;
-          xPos = xPos * 0.3;
+        <CoinSpawner startPositions={updatedPlayers.map(p => p.position)} />
 
-          return (
-            <Player
-              key={player.username}
-              username={player.username}
-              model={player.model}
-              initialPosition={[xPos, -0.7, 0]}
-              isPlayerPlayer={player.username == "John"} // what logic do we have to determine who is who? frontend seems to be multiplayer rn
-            />
-          );
-        })}
       </Canvas>
     </div>
   );
