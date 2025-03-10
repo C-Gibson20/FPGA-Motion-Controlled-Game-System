@@ -8,7 +8,7 @@ const MODELS = {
     MarioSideStep: { path: "/models/MarioSideStep.glb", scale: 0.003 },
 };
 
-const Player = ({ username, isPlayerPlayer, model, initialPosition, playerRef }) => {
+const PlayerMario = ({ username, isPlayerPlayer, model, initialPosition, playerRef }) => {
     const [currentModel, setCurrentModel] = useState("MarioIdle");
     const groupRef = useRef(); // This group will maintain the consistent location
     //const playerRef = useRef(); // Reference for the model primitive if needed
@@ -136,4 +136,4 @@ const Player = ({ username, isPlayerPlayer, model, initialPosition, playerRef })
     );
 };
 
-export default Player;
+export default PlayerMario;

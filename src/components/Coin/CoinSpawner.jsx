@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import Coin from "./Coin.jsx";
+import * as THREE from "three";
 
 const GROUND_Y = -0.65;
 const MIN_GRAVITY = 0.05;
@@ -14,7 +15,7 @@ const getSpawnPositionNear = (basePosition) => {
   return [x, y, z];
 };
 
-const CoinSpawner = ({ startPositions }) => {
+const CoinSpawner = ({ startPositions, playerRef, onCoinCollect }) => {
   const [coins, setCoins] = useState([]);
   const coinVelocities = useRef({});
   const intervalRef = useRef(null);
@@ -52,27 +53,39 @@ const CoinSpawner = ({ startPositions }) => {
   };
 
   useFrame((state, delta) => {
-    setCoins((prevCoins) =>
-      prevCoins
-        .map((coin) => {
-          const id = coin.id;
-          let [x, y, z] = coin.position;
-          let velocity = coinVelocities.current[id] ?? 0;
+    if (!playerRef.current) return;
+    const playerPos = playerRef.current.position;
 
-          velocity -= coin.gravity * delta;
-          y += velocity * delta;
+    setCoins((prevCoins) => {
+      const newCoins = [];
+      prevCoins.forEach((coin) => {
+        const id = coin.id;
+        let [x, y, z] = coin.position;
+        let velocity = coinVelocities.current[id] || 0;
 
-          coinVelocities.current[id] = velocity;
+        velocity -= coin.gravity * delta;
+        y += velocity * delta;
+        coinVelocities.current[id] = velocity;
 
-          if (y <= GROUND_Y) {
-            delete coinVelocities.current[id];
-            return null; 
-          }
+        // Remove coin if it hits the ground.
+        if (y <= GROUND_Y) {
+          delete coinVelocities.current[id];
+          return;
+        }
 
-          return { ...coin, position: [x, y, z] };
-        })
-        .filter(Boolean)
-    );
+        // Check for collision with the player.
+        const coinPos = new THREE.Vector3(x, y, z);
+        if (playerPos.distanceTo(coinPos) < 0.5) {
+          // Collision detected – notify and remove the coin.
+          onCoinCollect();
+          delete coinVelocities.current[id];
+          return;
+        }
+
+        newCoins.push({ ...coin, position: [x, y, z] });
+      });
+      return newCoins;
+    });
   });
 
   return (
