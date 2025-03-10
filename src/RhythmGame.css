@@ -167,8 +167,11 @@
 }
 
 /* Exit button */
-.exit-button {
-    padding: 12px 24px;
+/* .exit-button {
+    position: absolute;
+    top: 10px;
+    left: 15px;
+    padding: 12px 12px;
     background: #ffcc00;
     color: black;
     border: 3px solid black;
@@ -177,10 +180,54 @@
     font-size: 1.5rem;
     cursor: pointer;
     transition: 0.3s;
-    margin-top: 20px;
+    margin-top: 10px;
+    margin-left: 5 px;
 }
 
 .exit-button:hover {
     background: #0099ff;
     transform: scale(1.1);
+} */
+
+
+/* .exit-button {
+    position: absolute;
+    top: 5px;
+    left: 10px;
+    background: none; /* Remove default button background 
+    border: none; /* Remove border 
+    padding: 0; /* Remove extra spacing 
+    cursor: pointer; /* Make it clickable 
+    z-index: 1000; /* Ensure it stays above everything 
+  } */
+  
+.exit-button img {
+    width: 50px; /* Adjust size as needed */
+    height: auto; /* Maintain aspect ratio */
 }
+  
+.exit-button:hover img {
+    opacity: 0.8; /* Slight fade effect on hover */
+  }
+
+.exit-button {
+    position: absolute;
+    top: 5px;
+    left: 10px;
+    margin-top: 15px;
+    padding: 2px 4px;
+    background: #ffcc00;
+    color: black;
+    border: 3px solid black;
+    border-radius: 8px;
+    font-family: 'Luckiest Guy', cursive;
+    font-size: 1.5rem;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+/* .connection-popup-content button:hover {
+background: #0099ff;
+transform: scale(1.1);
+} */
+  
