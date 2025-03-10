@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { useGLTF, useTexture, useAnimations } from "@react-three/drei";
 import Server from "./server";
+import './Scene.css';
+import {playBackgroundSound, playJumpSound} from "./Sounds";
 import CoinSpawner from "./CoinSpawner";
 
 const MODELS = {
@@ -38,8 +40,9 @@ const Player = ({ username, isPlayerPlayer, model, initialPosition }) => {
 
   const velocityY = useRef(0);
   const speed = 0.05;
-  const jumpStrength = 0.07; // Jump height
-  const gravity = 0.004; // Gravity effect
+  const jumpStrength = 0.1; // Jump height
+  const gravity = 0.0025; // Gravity effect
+
   const isJumping = useRef(false);
   const keys = useRef({
     ArrowUp: false,
@@ -71,6 +74,8 @@ const Player = ({ username, isPlayerPlayer, model, initialPosition }) => {
         if (!isJumping.current) {
           isJumping.current = true;
           velocityY.current = jumpStrength;
+          jumpHoldFrames.current = 0; // Reset jump frame tracking
+          playJumpSound();
         }
       }
     };
@@ -145,24 +150,19 @@ const Player = ({ username, isPlayerPlayer, model, initialPosition }) => {
 
 const Scoreboard = ({ players }) => {
   return (
-    <div
-      style={{
-        position: "fixed",
-        top: 0,
-        left: 0,
-        width: "100%",
-        display: "flex",
-        justifyContent: "space-evenly",
-        alignItems: "center",
-        padding: "10px 0",
-        zIndex: 10,
-      }}
-    >
-      {players.map((p) => (
-        <h1 key={p.username} style={{ color: "white", fontSize: "24px", margin: 0 }}>
-          {p.username}: {p.score}
-        </h1>
-      ))}
+    <div className="scoreboard">
+      <ul>
+        {players
+          .map((player) => (
+            <li key={player.username} className="leaderboard-entry">
+              <img src={player.avatar} alt={player.username} className="player-avatar" />
+              <div className="score-box">
+                {/* <span className="player-name">{player.username}</span> */}
+                <span className="player-score">{player.score}</span>
+              </div>
+            </li>
+          ))}
+      </ul>
     </div>
   );
 };

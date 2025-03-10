@@ -1,0 +1,61 @@
+/* Leaderboard container */
+.scoreboard {
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    color: white;
+    padding: 10px;
+    border-radius: 12px;
+    font-size: 16px;
+    z-index: 1000;
+    min-width: 180px;
+    max-width: 250px;
+}
+
+/* Leaderboard list */
+.scoreboard ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+/* Individual leaderboard entry */
+.leaderboard-entry {
+    display: flex;
+    align-items: center;
+    position: relative; /* Needed for absolute positioning */
+    gap: 8px;
+    padding: 5px 10px;
+}
+
+/* Player avatar */
+.player-avatar {
+    width: 100px;
+    height: auto;
+    border-radius: 50%;
+    position: relative;
+    z-index: 2; /* Ensure it appears above the score box */
+}
+
+/* Score box (grey shape) */
+.score-box {
+    flex-grow: 1;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end; /* Aligns content to the right */
+    background: rgba(84, 84, 84, 0.9);
+    border-radius: 25px;
+    padding: 6px 20px;
+    height: 40px;
+    min-width: 100px;
+    position: relative;
+    z-index: 1;
+    margin-left: -80px; /* Moves the score box to overlap with the avatar */
+}
+
+/* Player score */
+.player-score {
+    font-size: 22px;
+    font-weight: bold;
+    color: #ffcc00;
+}

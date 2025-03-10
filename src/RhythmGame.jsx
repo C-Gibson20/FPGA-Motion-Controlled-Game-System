@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import './RhythmGame.css';
 import axios from 'axios';
 import Scene from './Scene.jsx';
+import { playBackgroundSound, stopBackgroundSound } from './Sounds.jsx';
 
 const DEFAULT_BEAT_INTERVAL = 3000;
 const SPEED_UP_BEAT_INTERVAL = 2000;
@@ -134,9 +135,11 @@ const RhythmGame = ({ players, modifier, ws, onExit }) => {
   return (
     <div className="game-container">
             <Scene />
-      <button onClick={onExit} className="exit-button">
-        Exit to Home
+      <button onClick={onExit} class="exit-button">
+        <img src="/images/cross_red.png" alt="Exit"/>
       </button>
+      <button onClick={playBackgroundSound}>Start Music</button>
+      <button onClick={stopBackgroundSound}>Stop Music</button>
       {showFinalLeaderboard && (
         <div className="final-leaderboard">
           <div className="popup">
