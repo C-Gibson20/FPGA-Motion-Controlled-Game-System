@@ -5,8 +5,8 @@ import Server from "./server";
 import * as THREE from "three";
 
 const MODELS = {
-  Mario: { path: "/models/Mario.glb", scale: 0.3 },
-  Luigi: { path: "/models/Luigi.glb", scale: 1.5 },
+// Luigi: { path: "/models/MarioIdle.glb", scale: 0.005 },
+  Mario: { path: "/models/MarioJump.glb", scale: 0.003 },
 };
 
 const Background = () => {
@@ -40,6 +40,10 @@ const Player = ({ username, isPlayerPlayer, model, initialPosition }) => {
     ArrowRight: false,
     Space: false,
   });
+
+  useEffect(() => {
+    console.log("Available animations:", Object.keys(actions));
+  }, [actions]);
 
   useEffect(() => {
     if (!isPlayerPlayer) {
@@ -96,6 +100,8 @@ const Player = ({ username, isPlayerPlayer, model, initialPosition }) => {
       playerRef.current.position.x += speed;
     }
 
+    actions["mixamo.com"]?.play();
+
     if (isJumping.current) {
       playerRef.current.position.y += velocityY.current;
       jumpHoldFrames.current++;
@@ -106,6 +112,7 @@ const Player = ({ username, isPlayerPlayer, model, initialPosition }) => {
         playerRef.current.position.y = initialPosition[1]; // Reset to ground level
         isJumping.current = false;
         velocityY.current = 0;
+        actions["mixamo.com"]?.stop();
       }
     }
   });
@@ -157,7 +164,7 @@ const Scene = () => {
       <Canvas shadows camera={{ position: [0, 5, 10], fov: 10 }} style={{ display: "block" }}>
         <Background />
 
-        <ambientLight intensity={1.5} />
+        <ambientLight intensity={4} />
         <directionalLight position={[10, 10, 5]} castShadow />
 
         {players.map((player, index) => {
