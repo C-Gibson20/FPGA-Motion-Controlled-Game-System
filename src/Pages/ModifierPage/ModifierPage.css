@@ -1,0 +1,103 @@
+@import url('https://fonts.googleapis.com/css2?family=Luckiest+Guy&display=swap');
+
+@font-face {
+    font-family: 'SuperMario256';
+    src: url('../../fonts/SuperMario256.ttf') format('truetype');
+    font-weight: normal;
+    font-style: Super Mario;
+}
+
+.modifier-container {
+    background: url('../../assets/Game_Background_3.jpg');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    padding: 20px;
+  }
+  
+.wheel_title span:nth-child(1) { color: black; border: 3px white; }
+.wheel_title span:nth-child(2) { color: black; border: 3px white; }
+.wheel_title span:nth-child(3) { color: black; border: 3px white; }
+.wheel_title span:nth-child(4) { color: black; border: 3px white; }
+.wheel_title span:nth-child(5) { color: black; border: 3px white; }
+.wheel_title span:nth-child(6) { color: black; border: 3px white; }
+.wheel_title span:nth-child(7) { color: black; border: 3px white; }
+.wheel_title span:nth-child(8) { color: black; border: 3px white; }
+
+.wheel_title {
+    font-size: 3.5rem;
+    font-family: 'SuperMario256', sans-serif;
+    display: flex;
+    flex-wrap: wrap; 
+    justify-content: center;
+    text-align: center;
+    gap: 10px; 
+    max-width: 100%;
+  }
+  
+.wheel_word {
+    display: flex;
+    gap: 2px; 
+}
+  
+.wheel_word span {
+    -webkit-text-stroke: 2px white; 
+    text-shadow: 
+      -3px -3px 0 black,  
+       3px -3px 0 black,  
+      -3px  3px 0 black,  
+       3px  3px 0 black,
+      -4px  0px 0 black,  
+       4px  0px 0 black,  
+       0px -4px 0 black,  
+       0px  4px 0 black;
+}
+  
+.wheel-wrapper {
+position: relative;
+display: flex;
+justify-content: center;
+align-items: center;
+margin: 20px auto;
+}
+
+/* canvas {
+border-radius: 50%;
+border: 5px solid black;
+background: white;
+} */
+
+.wheel-pointer {
+position: absolute;
+top: 5px;
+width: 0;
+height: 0;
+border-left: 15px solid transparent;
+border-right: 15px solid transparent;
+border-bottom: 30px solid black;
+}
+
+button {
+margin-top: 20px;
+padding: 12px 24px;
+background: #ffe062;
+color: black;
+border: 3px solid black;
+border-radius: 8px;
+font-family: 'Luckiest Guy';
+font-size: 1.5rem;
+cursor: pointer;
+transition: 0.3s;
+}
+
+button:hover {
+background: #0099ff;
+transform: scale(1.1);
+}
+  

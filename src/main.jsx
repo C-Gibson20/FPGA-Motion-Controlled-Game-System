@@ -1,13 +1,15 @@
 import { StrictMode, useState, useEffect } from "react";
 import { createRoot } from "react-dom/client";
 import "./index.css";
-import Menu from "./Menu.jsx";
-import ModifierPage from "./ModifierPage.jsx";
-import RhythmGame from "./RhythmGame.jsx";
-import ConnectionPopup from "./ConnectionPopup.jsx";
-import "./Menu.css";
-import "./RhythmGame.css";
-import "./ModifierPage.css";
+import Menu from "./pages/Menu/Menu.jsx";
+import ModifierPage from "./pages/ModifierPage/ModifierPage.jsx";
+import RhythmGame from "./pages/RythmGame/RhythmGame.jsx";
+// import Minigame2 from "./pages/MiniGames/Minigame2.jsx";
+import ConnectionPopup from "./pages/ConnexionPopup/ConnectionPopup.jsx";
+// import CoinGame  from "./components/CoinGame/CoinGame.jsx";
+import "./pages/Menu/Menu.css";
+import "./pages/RythmGame/RhythmGame.css";
+import "./pages/ModifierPage/ModifierPage.css";
 
 function Root() {
   const [gameStarted, setGameStarted] = useState(false);
@@ -19,7 +21,18 @@ function Root() {
 
   return (
     <StrictMode>
-      {<div className="container">
+      {/* <CoinGame/> */}
+      {/* <Minigame2  
+            players={players}
+            modifier={modifier}
+            ws={wsInstance}  // pass the same ws instance
+            onExit={() => {
+              setGameStarted(false);
+              setModifierPage(false);
+            }}
+      /> */}
+
+      { <div className="container">
         {!gameStarted && !modifierPage && !showPopup ? (
           <Menu
             onStart={(selectedPlayers, ws) => {

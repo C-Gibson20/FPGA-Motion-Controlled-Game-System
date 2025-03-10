@@ -1,0 +1,55 @@
+@import url('https://fonts.googleapis.com/css2?family=Luckiest+Guy&display=swap');
+
+.connection-popup {
+  background: url('../../assets/Game_Background_3.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-family: 'Luckiest Guy', sans-serif;
+  color: black; /* Added this line */
+}
+
+.connection-popup-content {
+  font-size: 1.25rem;
+  background: white;
+  padding: 20px;
+  border-radius: 10px;
+  border: 4px solid black;
+  text-align: center;
+  box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.6);
+  color: black; /* Added this line */
+}
+
+.connection-popup-content h2 {
+  margin-bottom: 15px;
+}
+
+.connection-popup-content p {
+  margin: 10px 0;
+}
+
+.connection-popup-content button {
+  margin-top: 15px;
+  padding: 10px 20px;
+  background: #ffcc00;
+  color: black;
+  border: 3px solid black;
+  border-radius: 8px;
+  font-family: 'Luckiest Guy', cursive;
+  font-size: 1.5rem;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.connection-popup-content button:hover {
+  background: #0099ff;
+  transform: scale(1.1);
+}
