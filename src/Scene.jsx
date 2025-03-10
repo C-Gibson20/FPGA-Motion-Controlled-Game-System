@@ -3,11 +3,11 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { useGLTF, useTexture, useAnimations } from "@react-three/drei";
 import Server from "./server";
 import CoinSpawner from "./CoinSpawner";
-import * as THREE from "three";
 
 const MODELS = {
-  Mario: { path: "/models/Mario.glb", scale: 0.3 },
-  Luigi: { path: "/models/Luigi.glb", scale: 1.5 }
+  MarioIdle: { path: "/models/MarioIdle.glb", scale: 0.003 },
+  MarioJump: { path: "/models/MarioJump.glb", scale: 0.003 },
+  MarioSideStep: { path: "/models/MarioSideStep.glb", scale: 0.003 },
 };
 
 const Background = () => {
@@ -22,18 +22,22 @@ const Background = () => {
 };
 
 const Player = ({ username, isPlayerPlayer, model, initialPosition }) => {
-  const modelData = MODELS[model] || MODELS.Mario;
-  const { scene, animations } = useGLTF(modelData.path);
+  const[currentModel, setCurrentModel] = useState("MarioIdle");
   const playerRef = useRef();
-  const { actions } = useAnimations(animations, playerRef);
 
-  const speed = 0.05;
-  const jumpStrength = 0.1;
-  const gravity = 0.00015;
-
-  const isJumping = useRef(false);
+  const modelData = MODELS[currentModel];
+  const { scene, animations } = useGLTF(modelData.path);
+  const { scene: idleScene, animations: idleAnimations } = useGLTF(MODELS.MarioIdle.path);
+  const { scene: jumpScene, animations: jumpAnimations } = useGLTF(MODELS.MarioJump.path);
+  const { scene: sideStepScene, animations: sideStepAnimations } = useGLTF(MODELS.MarioSideStep.path);
+  const { actions: idleActions } = useAnimations(idleAnimations, playerRef);
+  const { actions: jumpActions } = useAnimations(jumpAnimations, playerRef);
+  const { actions: sideStepActions } = useAnimations(sideStepAnimations, playerRef);
   const velocityY = useRef(0);
-  const jumpHoldFrames = useRef(0);
+  const speed = 0.05;
+  const jumpStrength = 0.07; // Jump height
+  const gravity = 0.004; // Gravity effect
+  const isJumping = useRef(false);
   const keys = useRef({
     ArrowUp: false,
     ArrowDown: false,
@@ -48,6 +52,11 @@ const Player = ({ username, isPlayerPlayer, model, initialPosition }) => {
     const handleKeyDown = (e) => {
       if (keys.current[e.key] !== undefined) {
         keys.current[e.key] = true;
+      }
+      if (e.key === " " && !isJumping.current) {
+        isJumping.current = true;
+        velocityY.current = jumpStrength;
+        setCurrentModel("MarioJump");
       }
     };
 
@@ -73,7 +82,9 @@ const Player = ({ username, isPlayerPlayer, model, initialPosition }) => {
   }, []);
 
   useFrame(() => {
-    if (!isPlayerPlayer || !playerRef.current) return;
+    if (!isPlayerPlayer || !playerRef.current) {
+      return;
+    }
 
     if (keys.current.ArrowUp) {
       playerRef.current.position.y += speed;
@@ -90,16 +101,30 @@ const Player = ({ username, isPlayerPlayer, model, initialPosition }) => {
 
     if (isJumping.current) {
       playerRef.current.position.y += velocityY.current;
-      jumpHoldFrames.current++;
-      velocityY.current -= gravity * (1 + jumpHoldFrames.current * 0.1);
+      velocityY.current -= gravity;
 
       if (playerRef.current.position.y <= initialPosition[1]) {
         playerRef.current.position.y = initialPosition[1];
         isJumping.current = false;
         velocityY.current = 0;
+        setCurrentModel("MarioIdle");
       }
     }
   });
+
+
+  useEffect(() => {
+    idleActions["mixamo.com"]?.stop();
+    jumpActions["mixamo.com"]?.stop();
+    sideStepActions["mixamo.com"]?.stop();
+    if (currentModel === "MarioIdle") {
+      idleActions["mixamo.com"]?.play();
+    } else if (currentModel === "MarioJump") {
+      jumpActions["mixamo.com"]?.play();
+    } else if(currentModel === "MarioSideStep") {
+      sideStepActions["mixamo.com"]?.play();
+    }
+  }, [currentModel])
 
   return <primitive ref={playerRef} object={scene} position={initialPosition} scale={modelData.scale} />;
 };
@@ -157,10 +182,10 @@ const Scene = () => {
     <div style={{ width: "100vw", height: "100vh", overflow: "hidden", position: "relative" }}>
       <Scoreboard players={players} />
 
-      <Canvas shadows camera={{ position: [0, 5, 10], fov: 10 }} style={{ display: "block" }}>
+      <Canvas shadows camera={{ position: [0, 0, 10], fov: 10 }} style={{ display: "block" }}>
         <Background />
 
-        <ambientLight intensity={1.5} />
+        <ambientLight intensity={4} />
         <directionalLight position={[10, 10, 5]} castShadow />
 
         {updatedPlayers.map((player) => (
