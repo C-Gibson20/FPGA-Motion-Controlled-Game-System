@@ -13,13 +13,15 @@ const MODIFIERS = [
   { name: "No Modifier", effect: "none", color: "#0099ff" },
 ];
 
-export default function ModifierPage({ onSelect }) {
+export default function ModifierPage({ ws, onSelect }) {
   const canvasRef = useRef(null);
   const [spinning, setSpinning] = useState(false);
   const [rotation, setRotation] = useState(0);
   const [selectedModifier, setSelectedModifier] = useState(null);
   const stopSpinRef = useRef(false);
   const speedRef = useRef(10);
+  const [state, setState] = useState("start");
+  
 
   const drawWheel = (context, angleOffset) => {
     const canvas = canvasRef.current;
@@ -69,6 +71,54 @@ export default function ModifierPage({ onSelect }) {
     const context = canvas.getContext("2d");
     drawWheel(context, (rotation * Math.PI) / 180);
   }, [rotation]);
+
+  const [clickCount, setClickCount] = useState(0); // Track button presses
+
+  useEffect(() => {
+    if (ws) {
+      const messageHandler = (event) => {
+        console.log("RhythmGame received message:", event.data);
+        try {
+          const payload = JSON.parse(event.data);
+
+          if (payload.type === "data" && (payload.button1 || payload.button2)) {
+            setClickCount((prev) => prev + 1); // Increase button press count
+
+            setState((prevState) => {
+              if (prevState === "start" && !selectedModifier && !spinning) {
+                console.log("Auto-spinning wheel due to button press");
+                spinWheel();
+                return "spinning";
+              } 
+              else if (prevState === "spinning" && spinning) { 
+                console.log("Stopping the wheel due to second button press");
+                stopSpinRef.current = true; // Stop the spin
+                return "end";
+              }
+              else if (prevState === "end" && selectedModifier && clickCount >= 2) { 
+                console.log("Auto-continuing to next step due to third button press");
+                onSelect(selectedModifier.effect); // Auto-continue
+                setClickCount(0); // Reset click count for the next round
+                setSelectedModifier(null); // Reset modifier selection
+                return "start";
+              }
+              return prevState;
+            });
+          }
+        } catch (err) {
+          console.error("Error parsing message:", err);
+        }
+      };
+
+      ws.addEventListener("message", messageHandler);
+
+      return () => {
+        ws.removeEventListener("message", messageHandler);
+      };
+    }
+  }, [ws, selectedModifier, spinning, clickCount, onSelect]); // Dependencies added for correct updates
+
+
 
   useEffect(() => {
     const handleKeyPress = (event) => {

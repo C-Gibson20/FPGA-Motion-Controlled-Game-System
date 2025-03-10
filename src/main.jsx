@@ -48,6 +48,7 @@ function Root() {
           />
         ) : !gameStarted && modifierPage ? (
           <ModifierPage
+            ws={wsInstance}  // pass the same ws instance
             onSelect={(selectedModifier) => {
               setModifier(selectedModifier);
               setGameStarted(true);
