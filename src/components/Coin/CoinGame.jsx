@@ -1,11 +1,10 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { useGLTF, useTexture, useAnimations } from "@react-three/drei";
+import { useTexture } from "@react-three/drei";
 import Player from "../Player/Player.jsx";
 import CoinSpawner from "./CoinSpawner.jsx"; // Your coin spawner component
 import Scoreboard from "../../pages/RythmGame/Scoreboard.jsx";
 import * as THREE from "three";
-// import './Scene.css';
 
 const Background = () => {
   const texture = useTexture("/images/Castel.jpg");
@@ -15,12 +14,24 @@ const Background = () => {
   texture.colorSpace = THREE.SRGBColorSpace;
 
   const { scene } = useThree();
-
   useEffect(() => {
     scene.background = texture;
   }, [scene, texture]);
 
   return null;
+};
+
+// This wrapper ensures that all its children are forced to layer 0 every frame.
+const CoinLayerGroup = ({ children, layer = 0 }) => {
+  const groupRef = useRef();
+  useFrame(() => {
+    if (groupRef.current) {
+      groupRef.current.traverse((child) => {
+        child.layers.set(layer);
+      });
+    }
+  });
+  return <group ref={groupRef}>{children}</group>;
 };
 
 const CoinGame = () => {
@@ -37,21 +48,32 @@ const CoinGame = () => {
   return (
     <div style={{ width: "100vw", height: "100vh", position: "relative" }}>
       <Scoreboard players={[{ username: playerData.username, score }]} />
-      <Canvas shadows camera={{ position: [0, 0, 10], fov: 10 }}>
-        <Background/>
-        <ambientLight intensity={4} />
-        <directionalLight position={[10, 10, 5]} castShadow />
+      <Canvas
+        shadows
+        camera={{ position: [0, 0, 10], fov: 10 }}
+        onCreated={({ camera }) => {
+          // Enable both layer 0 (for coins) and layer 1 (for the player and its light)
+          camera.layers.enable(0);
+          camera.layers.enable(1);
+          camera.layers.enable(2);
+        }}
+      >
+        <Background />
+        {/* Remove global lights */}
         <Player
           username={playerData.username}
           initialPosition={playerData.position}
           isPlayerPlayer={true}
           playerRef={controlledPlayerRef}
         />
-        <CoinSpawner
-          startPositions={[playerData.position,playerData.position]} 
-          playerRef={controlledPlayerRef}
-          onCoinCollect={handleCoinCollect}
-        />
+        {/* Wrap CoinSpawner so that its coins are forced to layer 0 */}
+        <CoinLayerGroup layer={2}>
+          <CoinSpawner
+            startPositions={[playerData.position, playerData.position]}
+            playerRef={controlledPlayerRef}
+            onCoinCollect={handleCoinCollect}
+          />
+        </CoinLayerGroup>
       </Canvas>
     </div>
   );
