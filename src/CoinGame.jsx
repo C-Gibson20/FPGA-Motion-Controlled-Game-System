@@ -1,13 +1,30 @@
-// CoinGame.jsx
-import React, { useState, useRef } from "react";
-import { Canvas } from "@react-three/fiber";
+import React, { useState, useEffect, useRef } from "react";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import { useGLTF, useTexture, useAnimations } from "@react-three/drei";
 import Player from "./Player";
-import CoinSpawner from "./CoinSpawner";
+import CoinSpawner from "./CoinSpawner"; // Your coin spawner component
 import Scoreboard from "./Scoreboard";
+import * as THREE from "three";
+import './Scene.css';
+
+const Background = () => {
+  const texture = useTexture("/images/background2.png");
+
+  // Ensure correct color encoding
+  texture.encoding = THREE.sRGBEncoding;
+  texture.colorSpace = THREE.SRGBColorSpace;
+
+  const { scene } = useThree();
+
+  useEffect(() => {
+    scene.background = texture;
+  }, [scene, texture]);
+
+  return null;
+};
 
 const CoinGame = () => {
   const [score, setScore] = useState(0);
-  // This ref will be passed to the controlled player for collision detection.
   const controlledPlayerRef = useRef();
 
   // Called when a coin is collected.
@@ -15,14 +32,14 @@ const CoinGame = () => {
     setScore((prevScore) => prevScore + 1);
   };
 
-  // For simplicity we assume one player with a starting position.
   const playerData = { username: "Player", position: [0, -0.7, 0] };
 
   return (
     <div style={{ width: "100vw", height: "100vh", position: "relative" }}>
       <Scoreboard players={[{ username: playerData.username, score }]} />
-      <Canvas shadows camera={{ position: [0, 0, 10], fov: 50 }}>
-        <ambientLight intensity={0.5} />
+      <Canvas shadows camera={{ position: [0, 0, 10], fov: 10 }}>
+        <Background/>
+        <ambientLight intensity={4} />
         <directionalLight position={[10, 10, 5]} castShadow />
         <Player
           username={playerData.username}
@@ -31,7 +48,7 @@ const CoinGame = () => {
           playerRef={controlledPlayerRef}
         />
         <CoinSpawner
-          startPositions={[playerData.position]} 
+          startPositions={[0, -0.7, 0]} 
           playerRef={controlledPlayerRef}
           onCoinCollect={handleCoinCollect}
         />

@@ -7,7 +7,6 @@ import {playBackgroundSound, playJumpSound} from "./Sounds";
 import CoinSpawner from "./CoinSpawner";
 import Player from "./Player";
 import Scoreboard from "./Scoreboard";
-
 import * as THREE from "three";
 
 const MODELS = {

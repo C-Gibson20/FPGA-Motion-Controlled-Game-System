@@ -5,6 +5,7 @@ import Menu from "./Menu.jsx";
 import ModifierPage from "./ModifierPage.jsx";
 import RhythmGame from "./RhythmGame.jsx";
 import ConnectionPopup from "./ConnectionPopup.jsx";
+import CoinGame  from "./CoinGame.jsx";
 import "./Menu.css";
 import "./RhythmGame.css";
 import "./ModifierPage.css";
@@ -19,6 +20,7 @@ function Root() {
 
   return (
     <StrictMode>
+      {/* <CoinGame/> */}
       <RhythmGame
             players={players}
             modifier={modifier}
