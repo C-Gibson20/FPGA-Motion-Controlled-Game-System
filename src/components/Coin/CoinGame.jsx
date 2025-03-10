@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { useGLTF, useTexture, useAnimations } from "@react-three/drei";
+import PlayerMario from "../Player/PlayerMario.jsx";
 import Player from "../Player/Player.jsx";
+import PlayerWaluigi from "../Player/PlayerWaluigi.jsx";
 import CoinSpawner from "./CoinSpawner.jsx"; // Your coin spawner component
 import Scoreboard from "../../pages/RythmGame/Scoreboard.jsx";
 import * as THREE from "three";
@@ -61,7 +63,7 @@ const CoinGame = () => {
       >
         <Background />
         {/* Remove global lights */}
-        <Player
+        <PlayerWaluigi
           username={playerData.username}
           initialPosition={playerData.position}
           isPlayerPlayer={true}
