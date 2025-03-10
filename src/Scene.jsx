@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { useGLTF, useTexture, useAnimations } from "@react-three/drei";
 import Server from "./server";
+import {playBackgroundSound, playJumpSound} from "./Sounds";
 import * as THREE from "three";
 
 const MODELS = {
@@ -61,6 +62,7 @@ const Player = ({ username, isPlayerPlayer, model, initialPosition }) => {
         if (!isJumping.current) {
           isJumping.current = true;
           velocityY.current = jumpStrength;
+          playJumpSound();
         }
       }
     };
@@ -153,7 +155,6 @@ const Scene = () => {
   return (
     <div style={{ width: "100vw", height: "100vh", overflow: "hidden", position: "relative" }}>
       <Scoreboard players={players} />
-
       <Canvas shadows camera={{ position: [0, 5, 10], fov: 10 }} style={{ display: "block" }}>
         <Background />
 
