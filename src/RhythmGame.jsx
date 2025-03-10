@@ -136,10 +136,10 @@ const RhythmGame = ({ players, modifier, ws, onExit }) => {
     <div className="game-container">
             <Scene />
       <button onClick={onExit} class="exit-button">
-        <img src="/images/cross_red.png" alt="Exit"/>
+        <img src="/images/cross.png" alt="Exit"/>
       </button>
-      <button onClick={playBackgroundSound}>Start Music</button>
-      <button onClick={stopBackgroundSound}>Stop Music</button>
+      {/* <button onClick={playBackgroundSound}>Start Music</button>
+      <button onClick={stopBackgroundSound}>Stop Music</button> */}
       {showFinalLeaderboard && (
         <div className="final-leaderboard">
           <div className="popup">

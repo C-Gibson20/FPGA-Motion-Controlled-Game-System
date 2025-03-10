@@ -62,10 +62,10 @@ const Player = ({ username, isPlayerPlayer, model, initialPosition }) => {
       if (e.key === " " && !isJumping.current) {
         isJumping.current = true;
         velocityY.current = jumpStrength;
-        setCurrentModel("MarioJump");
+        setCurrentModel("MarioJump"); 
       }
     };
-
+ 
     const handleKeyUp = (e) => {
       if (keys.current[e.key] !== undefined) {
         keys.current[e.key] = false;
