@@ -2,11 +2,12 @@ import React, { useState, useEffect, useRef } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { useGLTF, useTexture, useAnimations } from "@react-three/drei";
 import Server from "./server";
+import CoinSpawner from "./CoinSpawner";
 import * as THREE from "three";
 
 const MODELS = {
   Mario: { path: "/models/Mario.glb", scale: 0.3 },
-  Luigi: { path: "/models/Luigi.glb", scale: 1.5 },
+  Luigi: { path: "/models/Luigi.glb", scale: 1.5 }
 };
 
 const Background = () => {
@@ -27,11 +28,11 @@ const Player = ({ username, isPlayerPlayer, model, initialPosition }) => {
   const { actions } = useAnimations(animations, playerRef);
 
   const speed = 0.05;
-  const jumpStrength = 0.1; // Jump height
-  const gravity = 0.00015; // Gravity effect
+  const jumpStrength = 0.1;
+  const gravity = 0.00015;
 
   const isJumping = useRef(false);
-  const velocityY = useRef(0); // Y-axis velocity
+  const velocityY = useRef(0);
   const jumpHoldFrames = useRef(0);
   const keys = useRef({
     ArrowUp: false,
@@ -42,9 +43,7 @@ const Player = ({ username, isPlayerPlayer, model, initialPosition }) => {
   });
 
   useEffect(() => {
-    if (!isPlayerPlayer) {
-      return;
-    }
+    if (!isPlayerPlayer) return;
 
     const handleKeyDown = (e) => {
       if (keys.current[e.key] !== undefined) {
@@ -57,7 +56,6 @@ const Player = ({ username, isPlayerPlayer, model, initialPosition }) => {
         keys.current[e.key] = false;
       }
       if (e.key === " ") {
-        // Trigger jump on key release
         if (!isJumping.current) {
           isJumping.current = true;
           velocityY.current = jumpStrength;
@@ -74,17 +72,11 @@ const Player = ({ username, isPlayerPlayer, model, initialPosition }) => {
     };
   }, []);
 
-  // use keyboard for now
   useFrame(() => {
-    if (!isPlayerPlayer || !playerRef.current) {
-      return;
-    }
-
-    let ArrowUpJump = false;
+    if (!isPlayerPlayer || !playerRef.current) return;
 
     if (keys.current.ArrowUp) {
       playerRef.current.position.y += speed;
-      ArrowUpJump = true;
     }
     if (keys.current.ArrowDown) {
       playerRef.current.position.y -= speed;
@@ -99,11 +91,10 @@ const Player = ({ username, isPlayerPlayer, model, initialPosition }) => {
     if (isJumping.current) {
       playerRef.current.position.y += velocityY.current;
       jumpHoldFrames.current++;
-      velocityY.current -= gravity * (1 + jumpHoldFrames.current * 0.1); // Apply gravity
+      velocityY.current -= gravity * (1 + jumpHoldFrames.current * 0.1);
 
-      // Stop jumping when reaching the ground
       if (playerRef.current.position.y <= initialPosition[1]) {
-        playerRef.current.position.y = initialPosition[1]; // Reset to ground level
+        playerRef.current.position.y = initialPosition[1];
         isJumping.current = false;
         velocityY.current = 0;
       }
@@ -137,11 +128,10 @@ const Scoreboard = ({ players }) => {
   );
 };
 
-const FETCH_INTERVAL = 1000
+const FETCH_INTERVAL = 1000;
 
 const Scene = () => {
   const [players, setPlayers] = useState([]);
-  
 
   useEffect(() => {
     const fetchPlayers = () => setPlayers(Server.getPlayerInfo());
@@ -149,6 +139,19 @@ const Scene = () => {
     const interval = setInterval(fetchPlayers, FETCH_INTERVAL);
     return () => clearInterval(interval);
   }, []);
+
+  // Update players with positions
+  const updatedPlayers = players.map((player, index) => {
+    const totalPlayers = players.length;
+    const spacing = 10 / Math.max(1, totalPlayers);
+    let xPos = -3 + index * spacing;
+    xPos = xPos * 0.3;
+
+    return {
+      ...player,
+      position: [xPos, -0.7, 0], // attach position for CoinSpawner
+    };
+  });
 
   return (
     <div style={{ width: "100vw", height: "100vh", overflow: "hidden", position: "relative" }}>
@@ -160,24 +163,18 @@ const Scene = () => {
         <ambientLight intensity={1.5} />
         <directionalLight position={[10, 10, 5]} castShadow />
 
-        {players.map((player, index) => {
-          // spread players evenely
+        {updatedPlayers.map((player) => (
+          <Player
+            key={player.username}
+            username={player.username}
+            model={player.model}
+            initialPosition={player.position}
+            isPlayerPlayer={player.username === "John"}
+          />
+        ))}
 
-          const totalPlayers = players.length;
-          const spacing = 10 / Math.max(1, totalPlayers);
-          let xPos = -3 + index * spacing;
-          xPos = xPos * 0.3;
+        <CoinSpawner startPositions={updatedPlayers.map(p => p.position)} />
 
-          return (
-            <Player
-              key={player.username}
-              username={player.username}
-              model={player.model}
-              initialPosition={[xPos, -0.7, 0]}
-              isPlayerPlayer={player.username == "John"} // what logic do we have to determine who is who? frontend seems to be multiplayer rn
-            />
-          );
-        })}
       </Canvas>
     </div>
   );
