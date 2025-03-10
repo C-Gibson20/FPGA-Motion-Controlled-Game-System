@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import './RhythmGame.css';
 import axios from 'axios';
 import Scene from '../MiniGames/Scene.jsx';
-// import { playBackgroundSound, stopBackgroundSound } from '../../components/Sounds/Sounds.jsx';
+import { playBackgroundSound, stopBackgroundSound } from '../../components/Sounds/Sounds.jsx';
 
 const DEFAULT_BEAT_INTERVAL = 3000;
 const SPEED_UP_BEAT_INTERVAL = 2000;

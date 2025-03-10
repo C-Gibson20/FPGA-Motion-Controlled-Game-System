@@ -21,7 +21,7 @@ function Root() {
 
   return (
     <StrictMode>
-      <CoinGame/>
+      {<CoinGame/>}
       {/* <Minigame2  
             players={players}
             modifier={modifier}
@@ -32,7 +32,7 @@ function Root() {
             }}
       /> */}
 
-      {/* { <div className="container">
+      { <div className="container">
         {!gameStarted && !modifierPage && !showPopup ? (
           <Menu
             onStart={(selectedPlayers, ws) => {
@@ -76,7 +76,7 @@ function Root() {
             }}
           />
         )}
-      </div>} */}
+      </div>}
     </StrictMode>
   );
 }

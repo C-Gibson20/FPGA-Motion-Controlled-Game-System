@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { useTexture } from "@react-three/drei";
-import Player from "../Player/Player.jsx";
+import { useGLTF, useTexture, useAnimations } from "@react-three/drei";
+import PlayerMario from "../Player/PlayerMario.jsx";
 import CoinSpawner from "./CoinSpawner.jsx"; // Your coin spawner component
 import Scoreboard from "../../pages/RythmGame/Scoreboard.jsx";
 import * as THREE from "three";
+// import './Scene.css';
 
 const Background = () => {
   const texture = useTexture("/images/Castel.jpg");
