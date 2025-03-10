@@ -2,6 +2,7 @@ import asyncio
 import socket
 import json
 import websockets
+import time
 
 TCP_PORT = 12000  # Port for FPGA communication
 WS_PORT = 8765    # Port for WebSocket server
@@ -100,6 +101,7 @@ async def handle_tcp_connection():
             else:
                 print("Either no game configuration or maximum FPGA connections reached. Closing connection from", addr)
                 connection_socket.close()
+                time.sleep(1)
         except Exception as e:
             print("Error accepting FPGA connection:", e)
 
@@ -118,7 +120,12 @@ async def handle_fpga_client(conn, player_id):
                 "type": "data",
                 "player": player_id,
                 "data": message,
-                "button" : message[0] == 'B'
+                "button1" : message == 'B1',
+                "button2" : message == 'B2',
+                "jump" : message == 'J',
+                "left" : message == 'L',
+                "right" : message == 'R',
+                "still" : message == 'N'
             }
             await asyncio.gather(*[client.send(json.dumps(payload)) for client in clients])
     except Exception as e:
