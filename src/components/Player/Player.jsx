@@ -8,10 +8,17 @@ const MODELS = {
     MarioSideStep: { path: "/models/MarioSideStep.glb", scale: 0.003 },
 };
 
-const Player = ({ username, isPlayerPlayer, model, initialPosition }) => {
+const Player = ({ username, isPlayerPlayer, model, initialPosition, playerRef }) => {
     const [currentModel, setCurrentModel] = useState("MarioIdle");
     const groupRef = useRef(); // This group will maintain the consistent location
-    const playerRef = useRef(); // Reference for the model primitive if needed
+    //const playerRef = useRef(); // Reference for the model primitive if needed
+
+    // Forward the group ref to the provided playerRef so others can read its position.
+    useEffect(() => {
+        if (playerRef) {
+        playerRef.current = groupRef.current;
+        }
+    }, [playerRef]);
 
     const modelData = MODELS[currentModel];
     const { scene, animations } = useGLTF(modelData.path);
@@ -124,7 +131,7 @@ const Player = ({ username, isPlayerPlayer, model, initialPosition }) => {
     return (
         <group ref={groupRef} position={initialPosition}>
         {/* The primitive model is attached to the group */}
-        <primitive ref={playerRef} object={scene} scale={modelData.scale} />
+        <primitive object={scene} scale={modelData.scale} />
         </group>
     );
 };

@@ -5,7 +5,7 @@ import Player from "../Player/Player.jsx";
 import CoinSpawner from "./CoinSpawner.jsx"; // Your coin spawner component
 import Scoreboard from "../../pages/RythmGame/Scoreboard.jsx";
 import * as THREE from "three";
-import './Scene.css';
+// import './Scene.css';
 
 const Background = () => {
   const texture = useTexture("/images/Castel.jpg");
@@ -48,7 +48,7 @@ const CoinGame = () => {
           playerRef={controlledPlayerRef}
         />
         <CoinSpawner
-          startPositions={[0, -0.7, 0]} 
+          startPositions={[playerData.position,playerData.position]} 
           playerRef={controlledPlayerRef}
           onCoinCollect={handleCoinCollect}
         />
