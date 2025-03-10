@@ -96,8 +96,8 @@ const SpikeBall = ({
     playerPos.y += 0.7
   
     // Use the full Euclidean distance for collision detection.
-    const collisionThreshold = 0.4; // Adjust based on your model sizes.
-    if (playerPos.distanceTo(spikePos) < collisionThreshold && !hasScoredThisCycle.current) {
+    const collisionThreshold = 0.2; // Adjust based on your model sizes.
+    if ((playerPos.distanceTo(spikePos)) < collisionThreshold && !hasScoredThisCycle.current) {
       onCollision();
       hasScoredThisCycle.current = true;
     } else if (spikePos.x < playerPos.x && !hasScoredThisCycle.current) {

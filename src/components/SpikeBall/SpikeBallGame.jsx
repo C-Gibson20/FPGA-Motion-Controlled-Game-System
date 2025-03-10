@@ -1,16 +1,15 @@
-import React, { useState, useEffect, useRef } from "react";
-import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { useGLTF, useTexture, useAnimations } from "@react-three/drei";
+import React, { useState, useEffect, useRef } from "react"; 
+import { Canvas, useThree } from "@react-three/fiber";
+import { useTexture } from "@react-three/drei";
 import Player from "../Player/Player.jsx";
 import Scoreboard from "../../pages/RythmGame/Scoreboard.jsx";
 import * as THREE from "three";
 import SpikeBall from "./SpikeBall.jsx";
-// import './Scene.css';
+import "./SpikeBallGame.css";
+
 
 const Background = () => {
-  const texture = useTexture("/images/Castel.jpg");
-
-  // Ensure correct color encoding
+  const texture = useTexture("/images/Bowser.jpg");
   texture.encoding = THREE.sRGBEncoding;
   texture.colorSpace = THREE.SRGBColorSpace;
 
@@ -24,11 +23,22 @@ const Background = () => {
 
 const SpikeBallGame = () => {
   const [score, setScore] = useState(0);
-  const [lives, setLives] = useState(1);
+  const [lives, setLives] = useState(2);
+  const [gameOver, setGameOver] = useState(false);
   const controlledPlayerRef = useRef();
 
+  const handleCoinCollect = () => {
+    setScore((prev) => prev + 1);
+  };
+
   const handleSpikeCollision = () => {
-    setLives((prev) => Math.max(prev - 1, 0));
+    setLives((prev) => {
+      const updated = Math.max(prev - 1, 0);
+      if (updated === 0) {
+        setGameOver(true);
+      }
+      return updated;
+    });
     console.log("💥 Collision! Lives:", lives - 1);
   };
 
@@ -45,6 +55,23 @@ const SpikeBallGame = () => {
         players={[{ username: playerData.username, score }]}
         lives={lives}
       />
+
+      {gameOver && (
+        <div className="game-over-overlay">
+          <h1 className="title">
+        <span className="word">
+          <span>G</span><span>A</span><span>M</span><span>E</span>
+        </span>
+        <span className="word">
+          <span>O</span><span>V</span><span>E</span><span>R</span>
+        </span>
+      </h1>
+
+          <div className="game-over-score">Score: {score}</div>
+        </div>
+      )}
+
+
       <Canvas
         shadows
         camera={{ position: [0, 0, 10], fov: 10 }}
@@ -71,6 +98,5 @@ const SpikeBallGame = () => {
     </div>
   );
 };
-
 
 export default SpikeBallGame;
