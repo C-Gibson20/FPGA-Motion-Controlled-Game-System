@@ -5,8 +5,8 @@ import Server from "./server";
 import * as THREE from "three";
 
 const MODELS = {
-  Mario: { path: "/models/Mario.glb", scale: 0.1 },
-  Luigi: { path: "/models/Luigi.glb", scale: 0.7 },
+  Mario: { path: "/models/Mario.glb", scale: 0.25 },
+  Luigi: { path: "/models/Luigi.glb", scale: 1.5 },
 };
 
 const Background = () => {
@@ -26,11 +26,18 @@ const Player = ({ username, isPlayerPlayer, model, initialPosition }) => {
   const playerRef = useRef();
 
   const speed = 0.05;
+  const jumpStrength = 0.1; // Jump height
+  const gravity = 0.00015; // Gravity effect
+
+  const isJumping = useRef(false);
+  const velocityY = useRef(0); // Y-axis velocity
+  const jumpHoldFrames = useRef(0);
   const keys = useRef({
     ArrowUp: false,
     ArrowDown: false,
     ArrowLeft: false,
     ArrowRight: false,
+    Space: false,
   });
 
   useEffect(() => {
@@ -47,6 +54,13 @@ const Player = ({ username, isPlayerPlayer, model, initialPosition }) => {
     const handleKeyUp = (e) => {
       if (keys.current[e.key] !== undefined) {
         keys.current[e.key] = false;
+      }
+      if (e.key === " ") {
+        // Trigger jump on key release
+        if (!isJumping.current) {
+          isJumping.current = true;
+          velocityY.current = jumpStrength;
+        }
       }
     };
 
@@ -76,6 +90,19 @@ const Player = ({ username, isPlayerPlayer, model, initialPosition }) => {
     }
     if (keys.current.ArrowRight) {
       playerRef.current.position.x += speed;
+    }
+
+    if (isJumping.current) {
+      playerRef.current.position.y += velocityY.current;
+      jumpHoldFrames.current++;
+      velocityY.current -= gravity * (1 + jumpHoldFrames.current * 0.1); // Apply gravity
+
+      // Stop jumping when reaching the ground
+      if (playerRef.current.position.y <= initialPosition[1]) {
+        playerRef.current.position.y = initialPosition[1]; // Reset to ground level
+        isJumping.current = false;
+        velocityY.current = 0;
+      }
     }
   });
 
@@ -110,6 +137,7 @@ const FETCH_INTERVAL = 1000
 
 const Scene = () => {
   const [players, setPlayers] = useState([]);
+  
 
   useEffect(() => {
     const fetchPlayers = () => setPlayers(Server.getPlayerInfo());
@@ -125,7 +153,7 @@ const Scene = () => {
       <Canvas shadows camera={{ position: [0, 5, 10], fov: 10 }} style={{ display: "block" }}>
         <Background />
 
-        <ambientLight intensity={0.5} />
+        <ambientLight intensity={1.5} />
         <directionalLight position={[10, 10, 5]} castShadow />
 
         {players.map((player, index) => {
@@ -133,7 +161,7 @@ const Scene = () => {
 
           const totalPlayers = players.length;
           const spacing = 10 / Math.max(1, totalPlayers);
-          let xPos = -5 + index * spacing;
+          let xPos = -3 + index * spacing;
           xPos = xPos * 0.3;
 
           return (
@@ -141,7 +169,7 @@ const Scene = () => {
               key={player.username}
               username={player.username}
               model={player.model}
-              initialPosition={[xPos, 0, 0]}
+              initialPosition={[xPos, -0.7, 0]}
               isPlayerPlayer={player.username == "John"} // what logic do we have to determine who is who? frontend seems to be multiplayer rn
             />
           );

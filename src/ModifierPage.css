@@ -67,11 +67,11 @@ align-items: center;
 margin: 20px auto;
 }
 
-canvas {
+/* canvas {
 border-radius: 50%;
 border: 5px solid black;
 background: white;
-}
+} */
 
 .wheel-pointer {
 position: absolute;
