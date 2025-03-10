@@ -27,6 +27,12 @@ const RhythmGame = ({ players, modifier, ws, onExit }) => {
       beatInterval = DEFAULT_BEAT_INTERVAL;
   }
 
+  const handleKeyDown = (e) => {
+    if (keys.current[e.key] !== undefined) {
+      keys.current[e.key] = true;
+    }
+  };
+
   const hitTime = beatInterval / 2;
 
   useEffect(() => {
