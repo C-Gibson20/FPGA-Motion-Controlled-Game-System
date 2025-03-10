@@ -24,7 +24,7 @@ const Background = () => {
 
 const SpikeBallGame = () => {
   const [score, setScore] = useState(0);
-  const [lives, setLives] = useState(3);
+  const [lives, setLives] = useState(1);
   const controlledPlayerRef = useRef();
 
   const handleCoinCollect = () => {
@@ -68,8 +68,8 @@ const SpikeBallGame = () => {
         />
         <SpikeBall
           playerRef={controlledPlayerRef}
-          onCollision={() => setLives((l) => Math.max(l - 1, 0))}
-          onSafePass={() => setScore((s) => s + 1)}
+          onCollision={handleSpikeCollision}
+          onSafePass={handleSpikePass}
         />
       </Canvas>
     </div>
