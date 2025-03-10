@@ -1,137 +1,166 @@
 import React, { useRef, useEffect, useState } from "react";
 import { useGLTF, useAnimations } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
-import * as THREE from "three"; // ✅ Import Three.js
+import * as THREE from "three";
 
 const MODELS = {
-    WaluigiIdle: { path: "/models/WaluigiIdle.glb", scale: 0.004 },
-    WaluigiJump: { path: "/models/WaluigiJump.glb", scale: 0.004 },
-    WaluigiSideStep: { path: "/models/WaluigiSideStep.glb", scale: 0.004 },
+  WaluigiIdle: { path: "/models/WaluigiIdle.glb", scale: 0.004 },
+  WaluigiJump: { path: "/models/WaluigiJump.glb", scale: 0.004 },
+  WaluigiSideStep: { path: "/models/WaluigiSideStep.glb", scale: 0.004 },
+  WaluigiRightSideStep: { path: "/models/WaluigiRightSideStep.glb", scale: 0.004 },
 };
 
 const PlayerWaluigi = ({ username, isPlayerPlayer, initialPosition, playerRef }) => {
-    const [currentModel, setCurrentModel] = useState("WaluigiIdle");
-    const groupRef = useRef();
-    const activeAction = useRef(null);
+  const [currentModel, setCurrentModel] = useState("WaluigiIdle");
+  const groupRef = useRef();
+  const ambientLightRef = useRef();
+  const activeAction = useRef(null);
 
-    useEffect(() => {
-        if (playerRef) {
-            playerRef.current = groupRef.current;
-        }
-    }, [playerRef]);
+  // Forward group ref for external access and set all objects in the group to layer 1.
+  useEffect(() => {
+    if (playerRef) {
+      playerRef.current = groupRef.current;
+    }
+    if (groupRef.current) {
+      groupRef.current.traverse((child) => {
+        child.layers.set(1);
+      });
+    }
+  }, [playerRef]);
 
-    const modelData = MODELS[currentModel];
-    const { scene, animations } = useGLTF(modelData.path);
-    const { scene: idleScene, animations: idleAnimations } = useGLTF(MODELS.WaluigiIdle.path);
-    const { scene: jumpScene, animations: jumpAnimations } = useGLTF(MODELS.WaluigiJump.path);
-    const { scene: sideStepScene, animations: sideStepAnimations } = useGLTF(MODELS.WaluigiSideStep.path);
+  const modelData = MODELS[currentModel];
+  // Load the current model's scene.
+  const { scene } = useGLTF(modelData.path);
+  // Pre-load all animations from separate GLTF files.
+  const { animations: idleAnimations } = useGLTF(MODELS.WaluigiIdle.path);
+  const { animations: jumpAnimations } = useGLTF(MODELS.WaluigiJump.path);
+  const { animations: sideStepAnimations } = useGLTF(MODELS.WaluigiSideStep.path);
+  const { animations: rightSideStepAnimations } = useGLTF(MODELS.WaluigiRightSideStep.path);
 
-    const { actions: idleActions } = useAnimations(idleAnimations, groupRef);
-    const { actions: jumpActions } = useAnimations(jumpAnimations, groupRef);
-    const { actions: sideStepActions } = useAnimations(sideStepAnimations, groupRef);
+  // Create animation actions for each set.
+  const { actions: idleActions } = useAnimations(idleAnimations, groupRef);
+  const { actions: jumpActions } = useAnimations(jumpAnimations, groupRef);
+  const { actions: sideStepActions } = useAnimations(sideStepAnimations, groupRef);
+  const { actions: rightSideStepActions } = useAnimations(rightSideStepAnimations, groupRef);
 
-    const velocityY = useRef(0);
-    const speed = 0.05;
-    const jumpStrength = 0.07;
-    const gravity = 0.004;
-    const isJumping = useRef(false);
-    const keys = useRef({
-        ArrowUp: false,
-        ArrowDown: false,
-        ArrowLeft: false,
-        ArrowRight: false,
-        Space: false,
-    });
+  const velocityY = useRef(0);
+  const speed = 0.05;
+  const jumpStrength = 0.07;
+  const gravity = 0.004;
+  const isJumping = useRef(false);
+  const keys = useRef({
+    ArrowUp: false,
+    ArrowDown: false,
+    ArrowLeft: false,
+    ArrowRight: false,
+    Space: false,
+  });
 
-    useEffect(() => {
-        if (!isPlayerPlayer) return;
+  // Keyboard event listeners for movement and jumping.
+  useEffect(() => {
+    if (!isPlayerPlayer) return;
 
-        const handleKeyDown = (e) => {
-            if (keys.current[e.key] !== undefined) {
-                keys.current[e.key] = true;
-            }
-            if (e.key === " " && !isJumping.current) {
-                isJumping.current = true;
-                velocityY.current = jumpStrength;
-                setCurrentModel("WaluigiJump");
-            }
-        };
+    const handleKeyDown = (e) => {
+      if (keys.current[e.key] !== undefined) {
+        keys.current[e.key] = true;
+      }
+      if (e.key === " " && !isJumping.current) {
+        isJumping.current = true;
+        velocityY.current = jumpStrength;
+        setCurrentModel("WaluigiJump");
+      }
+    };
 
-        const handleKeyUp = (e) => {
-            if (keys.current[e.key] !== undefined) {
-                keys.current[e.key] = false;
-            }
-        };
+    const handleKeyUp = (e) => {
+      if (keys.current[e.key] !== undefined) {
+        keys.current[e.key] = false;
+      }
+    };
 
-        window.addEventListener("keydown", handleKeyDown);
-        window.addEventListener("keyup", handleKeyUp);
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
 
-        return () => {
-            window.removeEventListener("keydown", handleKeyDown);
-            window.removeEventListener("keyup", handleKeyUp);
-        };
-    }, [isPlayerPlayer]);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+    };
+  }, [isPlayerPlayer]);
 
-    useFrame(() => {
-        if (!isPlayerPlayer || !groupRef.current) return;
+  useFrame(() => {
+    if (!isPlayerPlayer || !groupRef.current) return;
 
-        let moving = false;
+    let moving = false;
 
-        if (keys.current.ArrowLeft) {
-            groupRef.current.position.x -= speed;
-            if (currentModel !== "WaluigiSideStep") setCurrentModel("WaluigiSideStep");
-            moving = true;
-        }
-        if (keys.current.ArrowRight) {
-            groupRef.current.position.x += speed;
-            if (currentModel !== "WaluigiSideStep") setCurrentModel("WaluigiSideStep");
-            moving = true;
-        }
+    // Left arrow key triggers the left side step animation.
+    if (keys.current.ArrowLeft) {
+      groupRef.current.position.x -= speed;
+      if (currentModel !== "WaluigiSideStep") setCurrentModel("WaluigiSideStep");
+      moving = true;
+    }
+    // Right arrow key triggers the right side step animation.
+    if (keys.current.ArrowRight) {
+      groupRef.current.position.x += speed;
+      if (currentModel !== "WaluigiRightSideStep") setCurrentModel("WaluigiRightSideStep");
+      moving = true;
+    }
 
-        if (isJumping.current) {
-            groupRef.current.position.y += velocityY.current;
-            velocityY.current -= gravity;
+    if (isJumping.current) {
+      groupRef.current.position.y += velocityY.current;
+      velocityY.current -= gravity;
 
-            if (groupRef.current.position.y <= initialPosition[1]) {
-                groupRef.current.position.y = initialPosition[1];
-                isJumping.current = false;
-                velocityY.current = 0;
-                setCurrentModel("WaluigiIdle");
-            }
-        }
+      if (groupRef.current.position.y <= initialPosition[1]) {
+        groupRef.current.position.y = initialPosition[1];
+        isJumping.current = false;
+        velocityY.current = 0;
+        setCurrentModel("WaluigiIdle");
+      }
+    }
 
-        if (!moving && !isJumping.current && currentModel !== "WaluigiIdle") {
-            setCurrentModel("WaluigiIdle");
-        }
-    });
+    if (!moving && !isJumping.current && currentModel !== "WaluigiIdle") {
+      setCurrentModel("WaluigiIdle");
+    }
+  });
 
-    useEffect(() => {
-        if (activeAction.current) {
-            activeAction.current.fadeOut(0.2);
-        }
+  useEffect(() => {
+    // Fade out the previous animation.
+    if (activeAction.current) {
+      activeAction.current.fadeOut(0.2);
+    }
 
-        let action;
+    let action;
+    if (currentModel === "WaluigiIdle") {
+      action = idleActions["mixamo.com"] || Object.values(idleActions)[0];
+    } else if (currentModel === "WaluigiJump") {
+      action = jumpActions["mixamo.com"] || Object.values(jumpActions)[0];
+    } else if (currentModel === "WaluigiSideStep") {
+      action = sideStepActions["mixamo.com"] || Object.values(sideStepActions)[0];
+    } else if (currentModel === "WaluigiRightSideStep") {
+      action = rightSideStepActions["mixamo.com"] || Object.values(rightSideStepActions)[0];
+    }
 
-        if (currentModel === "WaluigiIdle") {
-            action = idleActions["mixamo.com"] || Object.values(idleActions)[0];
-        } else if (currentModel === "WaluigiJump") {
-            action = jumpActions["mixamo.com"] || Object.values(jumpActions)[0];
-        } else if (currentModel === "WaluigiSideStep") {
-            action = sideStepActions["mixamo.com"] || Object.values(sideStepActions)[0];
-        }
+    if (action) {
+      action.reset().fadeIn(0.2).play();
+      action.setLoop(THREE.LoopRepeat, Infinity);
+      activeAction.current = action;
+    }
+  }, [currentModel, idleActions, jumpActions, sideStepActions, rightSideStepActions]);
 
-        if (action) {
-            action.reset().fadeIn(0.2).play();
-            action.setLoop(THREE.LoopRepeat, Infinity); // ✅ Ensure animations loop
-            activeAction.current = action;
-        }
-    }, [currentModel, idleActions, jumpActions, sideStepActions]);
-
-    return (
-        <group ref={groupRef} position={initialPosition}>
-            <primitive object={scene} scale={modelData.scale} />
-        </group>
-    );
+  return (
+    <group ref={groupRef} position={initialPosition}>
+      {/* Local ambient light for the player only */}
+      <ambientLight
+        ref={ambientLightRef}
+        intensity={4}
+        onUpdate={(self) => {
+          self.layers.disable(0);
+          self.layers.disable(2);
+          self.layers.enable(1);
+        }}
+      />
+      {/* Adding a key based on currentModel forces a re-mount when switching animations */}
+      <primitive key={currentModel} object={scene} scale={modelData.scale} />
+    </group>
+  );
 };
 
 export default PlayerWaluigi;
