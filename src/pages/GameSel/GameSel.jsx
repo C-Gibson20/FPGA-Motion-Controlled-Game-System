@@ -4,7 +4,7 @@ const GameSel = ({ setGameSel }) => {
   const games = [
     { name: 'Spike Ball', image: 'NEED AN IMAGE' },
     { name: 'Coin Beat', image: 'NEED ANOTHER IMAGE' },
-    { name: 'Third game', image: 'NEED A THIRD IMAGE' },
+    { name: 'Arrow Game', image: 'NEED A THIRD IMAGE' },
   ];
 
   const containerStyle = {

@@ -16,7 +16,8 @@ import ArrowGame from "./components/Arrow/ArrowGame.jsx";
 
 const Games = {
   'Spike Ball': SpikeBallGame,
-  'Coin Beat': RhythmGame
+  'Coin Beat': CoinGame,
+  'Arrow Game': ArrowGame
 };
 
 function Root() {
@@ -32,8 +33,7 @@ function Root() {
 
   return (
     <StrictMode>
-      {/* <ArrowGame /> */}
-      <div className="container">
+      {<div className="container">
         {!gameStarted && !modifierPage && !showPopup ? (
           <Menu
             onStart={(selectedPlayers, ws) => {
@@ -82,7 +82,7 @@ function Root() {
             }}
           />
         )}
-      </div>
+      </div>}
     </StrictMode>
   );
 }
