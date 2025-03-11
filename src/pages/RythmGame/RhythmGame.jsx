@@ -2,29 +2,38 @@ import React, { useState, useEffect, useRef } from 'react';
 import './RhythmGame.css';
 import axios from 'axios';
 import Scene from '../MiniGames/Scene.jsx';
-// import { playBackgroundSound, stopBackgroundSound } from '../../components/Sounds/Sounds.jsx';
 
 const DEFAULT_BEAT_INTERVAL = 3000;
 const SPEED_UP_BEAT_INTERVAL = 2000;
 const HIT_WINDOW = 100;
 
 const RhythmGame = ({ players, modifier, ws, onExit }) => {
+  // players is an array of names, e.g. ["Mario", "Waluigi"]
   const [message, setMessage] = useState('');
   const [scores, setScores] = useState(players.map(() => 0));
   const [data, setData] = useState([]);
   const [showFinalLeaderboard, setShowFinalLeaderboard] = useState(false);
 
+  // Refs for beat timing and miss handling
   const lastBeatTime = useRef(Date.now());
   const beatRef = useRef(null);
   const missTimeoutRef = useRef(null);
   const hasPressedRef = useRef(false);
 
-  // Commands from the fpga
-  const [jumpLow, setJumpLow] = useState(false);
-  const [left, setLeft] = useState(false);
-  const [right, setRight] = useState(false);
-  const [still, setStill] = useState(false);
+  // (Optional) Keyboard keys – useful for testing.
+  const keys = useRef({
+    ArrowUp: false,
+    ArrowDown: false,
+    ArrowLeft: false,
+    ArrowRight: false,
+    " ": false,
+  });
 
+  // Instead of global FPGA flags, store per-player controls.
+  // We'll assume players are numbered 1 and 2.
+  const [fpgaControls, setFpgaControls] = useState({});
+
+  // Determine beat interval based on modifier.
   let beatInterval;
   switch (modifier) {
     case 'speed-up':
@@ -33,19 +42,14 @@ const RhythmGame = ({ players, modifier, ws, onExit }) => {
     default:
       beatInterval = DEFAULT_BEAT_INTERVAL;
   }
-
-  const handleKeyDown = (e) => {
-    if (keys.current[e.key] !== undefined) {
-      keys.current[e.key] = true;
-    }
-  };
-
   const hitTime = beatInterval / 2;
 
+  // Set CSS custom property for beat interval.
   useEffect(() => {
     document.documentElement.style.setProperty('--beat-interval', `${beatInterval}ms`);
   }, [beatInterval]);
 
+  // Start the beat timer and add a key listener.
   useEffect(() => {
     startBeat();
     window.addEventListener('keydown', handleKeyDown);
@@ -56,12 +60,14 @@ const RhythmGame = ({ players, modifier, ws, onExit }) => {
     };
   }, [beatInterval]);
 
+  // Fetch leaderboard data (scores) from server.
   useEffect(() => {
     axios.get('http://localhost:5001/scores')
-        .then(response => setData(response.data))
-        .catch(error => console.error('Error fetching data:', error));
+      .then(response => setData(response.data))
+      .catch(error => console.error('Error fetching data:', error));
   }, []);
 
+  // Handle incoming WebSocket messages.
   useEffect(() => {
     if (ws) {
       const messageHandler = (event) => {
@@ -69,23 +75,21 @@ const RhythmGame = ({ players, modifier, ws, onExit }) => {
         try {
           const payload = JSON.parse(event.data);
           if (payload.type === 'data') {
-            if (payload.button) {
-              triggerHit();
-            } else if (payload.jump) {
-              setJumpLow(true);
-              setTimeout(() => setJumpLow(false), 500);
-            } else if (payload.left) {
-              setLeft(true);
-              setRight(false);
-              setStill(false);
-            } else if (payload.right) {
-              setRight(true);
-              setLeft(false);
-              setStill(false);
-            } else if (payload.still) {
-              setStill(true);
-              setLeft(false);
-              setRight(false);
+            // Check for hit commands (using button1 or button2).
+            if (payload.button1 || payload.button2) {
+              // Trigger a hit for the specified player (player numbers are assumed to be 1-indexed).
+              triggerHit(payload.player - 1);
+            } else {
+              // Update FPGA controls for the specific player.
+              setFpgaControls(prev => ({
+                ...prev,
+                [payload.player]: {
+                  jump: payload.jump,
+                  left: payload.left,
+                  right: payload.right,
+                  still: payload.still,
+                }
+              }));
             }
           }
         } catch (err) {
@@ -94,14 +98,18 @@ const RhythmGame = ({ players, modifier, ws, onExit }) => {
       };
 
       ws.addEventListener("message", messageHandler);
-
-      return () => {
-        ws.removeEventListener("message", messageHandler);
-      };
+      return () => ws.removeEventListener("message", messageHandler);
     }
   }, [ws]);
 
+  // Optional keydown handler (for testing).
+  const handleKeyDown = (e) => {
+    if (keys.current[e.key] !== undefined) {
+      keys.current[e.key] = true;
+    }
+  };
 
+  // Beat timer: resets the beat and sets a timeout for a miss.
   const startBeat = () => {
     beatRef.current = setInterval(() => {
       lastBeatTime.current = Date.now();
@@ -115,8 +123,9 @@ const RhythmGame = ({ players, modifier, ws, onExit }) => {
     }, beatInterval);
   };
 
-  const triggerHit = () => {
-    console.log("triggerHit called");
+  // Trigger a hit for the specified player index (0 for first player, 1 for second).
+  const triggerHit = (playerIndex) => {
+    console.log("triggerHit called for player", playerIndex);
     const now = Date.now();
     const timeSinceLastBeat = now - lastBeatTime.current;
     let scoreUpdate = 0;
@@ -132,31 +141,31 @@ const RhythmGame = ({ players, modifier, ws, onExit }) => {
 
     setMessage(feedback);
     setScores((prevScores) =>
-      prevScores.map((score, i) => score + (i === 0 ? scoreUpdate : 0))
+      prevScores.map((score, i) => (i === playerIndex ? score + scoreUpdate : score))
     );
 
     hasPressedRef.current = true;
     clearTimeout(missTimeoutRef.current);
   };
 
-// <div className="game-message">{message}</div>
-//       <h2 className="score-title">Scores:</h2>
-//       <ul className="score-list">
-//         {players.map((player, index) => (
-//           <li key={index} className="score-item">
-//             {player}: {scores[index]}
-//           </li>
-//         ))}
-            // </ul>
-
   return (
     <div className="game-container">
-            <Scene jumpLow={jumpLow} left={left} right={right} still={still} />
-      <button onClick={onExit} className="exit-button">
-        ✖
-      </button>
-      {/* <button onClick={playBackgroundSound}>Start Music</button>
-      <button onClick={stopBackgroundSound}>Stop Music</button> */}
+      {/* Pass in individual FPGA controls and players to Scene */}
+      <Scene
+        fpgaControls={fpgaControls}
+        players={players.map((name, index) => ({
+          username: name,
+          score: scores[index] || 0,
+          // Define default model: first player is Mario, second is Waluigi.
+          model: index === 0 ? "MarioIdle" : "WaluigiIdle",
+        }))}
+        scores={scores}
+        startPositions={[[0, 0, 0], [1, 0, 0]]} // Ensure at least two start positions.
+        onCoinCollect={() => console.log("Coin collected callback")}
+        localPlayerName={players[0]} // Local keyboard control for the first player.
+      />
+
+      <button onClick={onExit} className="exit-button">✖</button>
       {showFinalLeaderboard && (
         <div className="final-leaderboard">
           <div className="popup">
@@ -183,6 +192,7 @@ const RhythmGame = ({ players, modifier, ws, onExit }) => {
           </div>
         </div>
       )}
+      <div className="game-message">{message}</div>
     </div>
   );
 };

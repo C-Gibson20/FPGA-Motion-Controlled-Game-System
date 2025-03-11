@@ -1,7 +1,7 @@
 import React from "react";
 import "./ConnectionPopup.css";
 
-const ConnectionPopup = ({ isConnected, playerConnections, expectedPlayers, onClose, onStartGame }) => {
+const ConnectionPopup = ({ isConnected, playerConnections= {}, expectedPlayers, onClose, onStartGame }) => {
   const allPlayersConnected = Object.keys(playerConnections).length === expectedPlayers;
 
   return (

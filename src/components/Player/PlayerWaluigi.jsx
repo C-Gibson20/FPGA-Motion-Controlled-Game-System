@@ -10,41 +10,32 @@ const MODELS = {
   WaluigiRightSideStep: { path: "/models/WaluigiRightSideStep.glb", scale: 0.004 },
 };
 
-const PlayerWaluigi = ({ username, isPlayerPlayer, initialPosition, playerRef }) => {
+const PlayerWaluigi = ({ username, isPlayerPlayer, initialPosition, playerRef, jumpLow, left, right, still }) => {
   const [currentModel, setCurrentModel] = useState("WaluigiIdle");
   const groupRef = useRef();
-  const ambientLightRef = useRef();
   const activeAction = useRef(null);
 
-  // Forward group ref for external access and set all objects in the group to layer 1.
+  // Forward group ref for external access.
   useEffect(() => {
     if (playerRef) {
       playerRef.current = groupRef.current;
     }
-    if (groupRef.current) {
-      groupRef.current.traverse((child) => {
-        child.layers.set(1);
-      });
-    }
   }, [playerRef]);
 
   const modelData = MODELS[currentModel];
-  // Load the current model's scene.
   const { scene } = useGLTF(modelData.path);
-  // Pre-load all animations from separate GLTF files.
   const { animations: idleAnimations } = useGLTF(MODELS.WaluigiIdle.path);
   const { animations: jumpAnimations } = useGLTF(MODELS.WaluigiJump.path);
   const { animations: sideStepAnimations } = useGLTF(MODELS.WaluigiSideStep.path);
   const { animations: rightSideStepAnimations } = useGLTF(MODELS.WaluigiRightSideStep.path);
 
-  // Create animation actions for each set.
   const { actions: idleActions } = useAnimations(idleAnimations, groupRef);
   const { actions: jumpActions } = useAnimations(jumpAnimations, groupRef);
   const { actions: sideStepActions } = useAnimations(sideStepAnimations, groupRef);
   const { actions: rightSideStepActions } = useAnimations(rightSideStepAnimations, groupRef);
 
   const velocityY = useRef(0);
-  const speed = 0.05;
+  const speed = 0.02;
   const jumpStrength = 0.07;
   const gravity = 0.004;
   const isJumping = useRef(false);
@@ -56,30 +47,22 @@ const PlayerWaluigi = ({ username, isPlayerPlayer, initialPosition, playerRef })
     Space: false,
   });
 
-  // Keyboard event listeners for movement and jumping.
+  // Keyboard controls for local player.
   useEffect(() => {
     if (!isPlayerPlayer) return;
-
     const handleKeyDown = (e) => {
-      if (keys.current[e.key] !== undefined) {
-        keys.current[e.key] = true;
-      }
+      if (keys.current[e.key] !== undefined) keys.current[e.key] = true;
       if (e.key === " " && !isJumping.current) {
         isJumping.current = true;
         velocityY.current = jumpStrength;
         setCurrentModel("WaluigiJump");
       }
     };
-
     const handleKeyUp = (e) => {
-      if (keys.current[e.key] !== undefined) {
-        keys.current[e.key] = false;
-      }
+      if (keys.current[e.key] !== undefined) keys.current[e.key] = false;
     };
-
     window.addEventListener("keydown", handleKeyDown);
     window.addEventListener("keyup", handleKeyUp);
-
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
@@ -87,27 +70,46 @@ const PlayerWaluigi = ({ username, isPlayerPlayer, initialPosition, playerRef })
   }, [isPlayerPlayer]);
 
   useFrame(() => {
-    if (!isPlayerPlayer || !groupRef.current) return;
-
-    let moving = false;
-
-    // Left arrow key triggers the left side step animation.
-    if (keys.current.ArrowLeft) {
+    if (!groupRef.current) return;
+    let didMove = false;
+    
+    // FPGA controls first.
+    if (jumpLow) {
+      if (!isJumping.current) {
+        isJumping.current = true;
+        velocityY.current = jumpStrength;
+        setCurrentModel("WaluigiJump");
+      }
+    }
+    if (left) {
       groupRef.current.position.x -= speed;
       if (currentModel !== "WaluigiSideStep") setCurrentModel("WaluigiSideStep");
-      moving = true;
+      didMove = true;
     }
-    // Right arrow key triggers the right side step animation.
-    if (keys.current.ArrowRight) {
+    if (right) {
       groupRef.current.position.x += speed;
       if (currentModel !== "WaluigiRightSideStep") setCurrentModel("WaluigiRightSideStep");
-      moving = true;
+      didMove = true;
     }
-
+    if (still && !didMove && !isJumping.current && currentModel !== "WaluigiIdle") {
+      setCurrentModel("WaluigiIdle");
+    }
+    // Then keyboard controls (if local).
+    if (isPlayerPlayer) {
+      if (keys.current.ArrowLeft) {
+        groupRef.current.position.x -= speed;
+        if (currentModel !== "WaluigiSideStep") setCurrentModel("WaluigiSideStep");
+        didMove = true;
+      }
+      if (keys.current.ArrowRight) {
+        groupRef.current.position.x += speed;
+        if (currentModel !== "WaluigiRightSideStep") setCurrentModel("WaluigiRightSideStep");
+        didMove = true;
+      }
+    }
     if (isJumping.current) {
       groupRef.current.position.y += velocityY.current;
       velocityY.current -= gravity;
-
       if (groupRef.current.position.y <= initialPosition[1]) {
         groupRef.current.position.y = initialPosition[1];
         isJumping.current = false;
@@ -115,18 +117,12 @@ const PlayerWaluigi = ({ username, isPlayerPlayer, initialPosition, playerRef })
         setCurrentModel("WaluigiIdle");
       }
     }
-
-    if (!moving && !isJumping.current && currentModel !== "WaluigiIdle") {
-      setCurrentModel("WaluigiIdle");
-    }
   });
 
   useEffect(() => {
-    // Fade out the previous animation.
     if (activeAction.current) {
       activeAction.current.fadeOut(0.2);
     }
-
     let action;
     if (currentModel === "WaluigiIdle") {
       action = idleActions["mixamo.com"] || Object.values(idleActions)[0];
@@ -137,7 +133,6 @@ const PlayerWaluigi = ({ username, isPlayerPlayer, initialPosition, playerRef })
     } else if (currentModel === "WaluigiRightSideStep") {
       action = rightSideStepActions["mixamo.com"] || Object.values(rightSideStepActions)[0];
     }
-
     if (action) {
       action.reset().fadeIn(0.2).play();
       action.setLoop(THREE.LoopRepeat, Infinity);
@@ -147,9 +142,7 @@ const PlayerWaluigi = ({ username, isPlayerPlayer, initialPosition, playerRef })
 
   return (
     <group ref={groupRef} position={initialPosition}>
-      {/* Local ambient light for the player only */}
       <ambientLight
-        ref={ambientLightRef}
         intensity={4}
         onUpdate={(self) => {
           self.layers.disable(0);
@@ -157,8 +150,7 @@ const PlayerWaluigi = ({ username, isPlayerPlayer, initialPosition, playerRef })
           self.layers.enable(1);
         }}
       />
-      {/* Adding a key based on currentModel forces a re-mount when switching animations */}
-      <primitive key={currentModel} object={scene} scale={modelData.scale} />
+      <primitive object={scene} scale={MODELS[currentModel].scale} />
     </group>
   );
 };

@@ -21,26 +21,6 @@ function Root() {
 
   return (
     <StrictMode>
-      {/* <RhythmGame
-            players={players}
-            modifier={modifier}
-            ws={wsInstance}  // pass the same ws instance
-            onExit={() => {
-              setGameStarted(false);
-              setModifierPage(false);
-            }}
-          /> */}
-      {<CoinGame/>}
-      {/* <Minigame2  
-            players={players}
-            modifier={modifier}
-            ws={wsInstance}  // pass the same ws instance
-            onExit={() => {
-              setGameStarted(false);
-              setModifierPage(false);
-            }}
-      /> */}
-
       { <div className="container">
         {!gameStarted && !modifierPage && !showPopup ? (
           <Menu

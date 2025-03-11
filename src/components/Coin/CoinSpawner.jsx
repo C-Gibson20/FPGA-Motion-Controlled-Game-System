@@ -15,40 +15,49 @@ const getSpawnPositionNear = (basePosition) => {
   return [x, y, z];
 };
 
+// Provide default start positions if none (or fewer than two) are passed
+const defaultStartPositions = [
+  [0, 0, 0],
+  [1, 0, 0]
+];
+
 const CoinSpawner = ({ startPositions, playerRef, onCoinCollect }) => {
+  // Use the provided startPositions if valid; otherwise fallback to defaultStartPositions.
+  const effectiveStartPositions =
+    startPositions && startPositions.length >= 2
+      ? startPositions
+      : defaultStartPositions;
+
   const [coins, setCoins] = useState([]);
   const coinVelocities = useRef({});
   const intervalRef = useRef(null);
 
   useEffect(() => {
-    if (!startPositions || startPositions.length < 2) return;
-  
-    let lastWasFirst = false; // Track which character got the last coin
-  
+    let lastWasFirst = false; // Track which base was used last
+
     const spawnCoin = () => {
-      // Alternate between startPositions[0] and startPositions[1]
-      const base = startPositions[lastWasFirst ? 1 : 0];
+      // Alternate between effectiveStartPositions[0] and effectiveStartPositions[1]
+      const base = effectiveStartPositions[lastWasFirst ? 1 : 0];
       lastWasFirst = !lastWasFirst;
-  
+
       const position = getSpawnPositionNear(base);
       const id = Date.now();
       const gravity = Math.random() * (MAX_GRAVITY - MIN_GRAVITY) + MIN_GRAVITY;
-  
+
       setCoins((prev) => [...prev, { id, position, gravity }]);
       coinVelocities.current[id] = 0;
     };
-  
+
     intervalRef.current = setInterval(spawnCoin, 1000);
-  
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [startPositions.length]);
-  
+  }, [effectiveStartPositions]);
 
   const collectCoin = (coinId) => {
     setCoins((prevCoins) => prevCoins.filter((coin) => coin.id !== coinId));
     delete coinVelocities.current[coinId];
+    if (onCoinCollect) onCoinCollect();
     console.log("Coin collected!");
   };
 
@@ -76,9 +85,7 @@ const CoinSpawner = ({ startPositions, playerRef, onCoinCollect }) => {
         // Check for collision with the player.
         const coinPos = new THREE.Vector3(x, y, z);
         if (playerPos.distanceTo(coinPos) < 0.5) {
-          // Collision detected – notify and remove the coin.
-          onCoinCollect();
-          delete coinVelocities.current[id];
+          collectCoin(id);
           return;
         }
 

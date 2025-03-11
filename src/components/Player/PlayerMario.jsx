@@ -10,41 +10,35 @@ const MODELS = {
   MarioRightSideStep: { path: "/models/MarioRightSideStep.glb", scale: 0.003 },
 };
 
-const PlayerMario = ({ username, isPlayerPlayer, initialPosition, playerRef }) => {
+const PlayerMario = ({ username, isPlayerPlayer, initialPosition, playerRef, jumpLow, left, right, still }) => {
   const [currentModel, setCurrentModel] = useState("MarioIdle");
   const groupRef = useRef();
-  const ambientLightRef = useRef();
   const activeAction = useRef(null);
 
-  // Forward group ref for external access and set all objects in the group to layer 1.
+  // Forward group ref for external access.
   useEffect(() => {
     if (playerRef) {
       playerRef.current = groupRef.current;
     }
-    if (groupRef.current) {
-      groupRef.current.traverse((child) => {
-        child.layers.set(1);
-      });
-    }
   }, [playerRef]);
 
-  // Load the current model's scene.
-  const { scene } = useGLTF(MODELS[currentModel].path);
+  const modelData = MODELS[currentModel];
+  const { scene } = useGLTF(modelData.path);
 
-  // Pre-load all animations from separate GLTF files.
+  // Load animations from separate GLTF files.
   const { animations: idleAnimations } = useGLTF(MODELS.MarioIdle.path);
   const { animations: jumpAnimations } = useGLTF(MODELS.MarioJump.path);
   const { animations: sideStepAnimations } = useGLTF(MODELS.MarioSideStep.path);
   const { animations: rightSideStepAnimations } = useGLTF(MODELS.MarioRightSideStep.path);
 
-  // Create animation actions for each set.
+  // Create animation actions.
   const { actions: idleActions } = useAnimations(idleAnimations, groupRef);
   const { actions: jumpActions } = useAnimations(jumpAnimations, groupRef);
   const { actions: sideStepActions } = useAnimations(sideStepAnimations, groupRef);
   const { actions: rightSideStepActions } = useAnimations(rightSideStepAnimations, groupRef);
 
   const velocityY = useRef(0);
-  const speed = 0.05;
+  const speed = 0.02;
   const jumpStrength = 0.07;
   const gravity = 0.004;
   const isJumping = useRef(false);
@@ -56,14 +50,12 @@ const PlayerMario = ({ username, isPlayerPlayer, initialPosition, playerRef }) =
     Space: false,
   });
 
-  // Keyboard event listeners for movement and jumping.
+  // Set up keyboard controls for local player.
   useEffect(() => {
     if (!isPlayerPlayer) return;
 
     const handleKeyDown = (e) => {
-      if (keys.current[e.key] !== undefined) {
-        keys.current[e.key] = true;
-      }
+      if (keys.current[e.key] !== undefined) keys.current[e.key] = true;
       if (e.key === " " && !isJumping.current) {
         isJumping.current = true;
         velocityY.current = jumpStrength;
@@ -72,14 +64,11 @@ const PlayerMario = ({ username, isPlayerPlayer, initialPosition, playerRef }) =
     };
 
     const handleKeyUp = (e) => {
-      if (keys.current[e.key] !== undefined) {
-        keys.current[e.key] = false;
-      }
+      if (keys.current[e.key] !== undefined) keys.current[e.key] = false;
     };
 
     window.addEventListener("keydown", handleKeyDown);
     window.addEventListener("keyup", handleKeyUp);
-
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
@@ -87,25 +76,49 @@ const PlayerMario = ({ username, isPlayerPlayer, initialPosition, playerRef }) =
   }, [isPlayerPlayer]);
 
   useFrame(() => {
-    if (!isPlayerPlayer || !groupRef.current) return;
+    if (!groupRef.current) return;
+    let didMove = false;
 
-    let moving = false;
-
-    if (keys.current.ArrowLeft) {
+    // Apply FPGA (WS) controls first.
+    if (jumpLow) {
+      if (!isJumping.current) {
+        isJumping.current = true;
+        velocityY.current = jumpStrength;
+        setCurrentModel("MarioJump");
+      }
+    }
+    if (left) {
       groupRef.current.position.x -= speed;
       if (currentModel !== "MarioSideStep") setCurrentModel("MarioSideStep");
-      moving = true;
+      didMove = true;
     }
-    if (keys.current.ArrowRight) {
+    if (right) {
       groupRef.current.position.x += speed;
       if (currentModel !== "MarioRightSideStep") setCurrentModel("MarioRightSideStep");
-      moving = true;
+      didMove = true;
+    }
+    if (still && !didMove && !isJumping.current && currentModel !== "MarioIdle") {
+      setCurrentModel("MarioIdle");
     }
 
+    // Then apply keyboard controls (if local).
+    if (isPlayerPlayer) {
+      if (keys.current.ArrowLeft) {
+        groupRef.current.position.x -= speed;
+        if (currentModel !== "MarioSideStep") setCurrentModel("MarioSideStep");
+        didMove = true;
+      }
+      if (keys.current.ArrowRight) {
+        groupRef.current.position.x += speed;
+        if (currentModel !== "MarioRightSideStep") setCurrentModel("MarioRightSideStep");
+        didMove = true;
+      }
+    }
+
+    // Update jumping motion.
     if (isJumping.current) {
       groupRef.current.position.y += velocityY.current;
       velocityY.current -= gravity;
-
       if (groupRef.current.position.y <= initialPosition[1]) {
         groupRef.current.position.y = initialPosition[1];
         isJumping.current = false;
@@ -113,18 +126,13 @@ const PlayerMario = ({ username, isPlayerPlayer, initialPosition, playerRef }) =
         setCurrentModel("MarioIdle");
       }
     }
-
-    if (!moving && !isJumping.current && currentModel !== "MarioIdle") {
-      setCurrentModel("MarioIdle");
-    }
   });
 
   useEffect(() => {
-    // Fade out the previous animation.
+    // Fade out previous animation.
     if (activeAction.current) {
       activeAction.current.fadeOut(0.2);
     }
-
     let action;
     if (currentModel === "MarioIdle") {
       action = idleActions["mixamo.com"] || Object.values(idleActions)[0];
@@ -135,7 +143,6 @@ const PlayerMario = ({ username, isPlayerPlayer, initialPosition, playerRef }) =
     } else if (currentModel === "MarioRightSideStep") {
       action = rightSideStepActions["mixamo.com"] || Object.values(rightSideStepActions)[0];
     }
-
     if (action) {
       action.reset().fadeIn(0.2).play();
       action.setLoop(THREE.LoopRepeat, Infinity);
@@ -145,9 +152,7 @@ const PlayerMario = ({ username, isPlayerPlayer, initialPosition, playerRef }) =
 
   return (
     <group ref={groupRef} position={initialPosition}>
-      {/* Local ambient light for the player only. onUpdate ensures that only layer 1 is lit. */}
       <ambientLight
-        ref={ambientLightRef}
         intensity={4}
         onUpdate={(self) => {
           self.layers.disable(0);
@@ -155,8 +160,7 @@ const PlayerMario = ({ username, isPlayerPlayer, initialPosition, playerRef }) =
           self.layers.enable(1);
         }}
       />
-      {/* Adding a key based on currentModel forces React to re-mount the primitive when switching animations */}
-      <primitive key={currentModel} object={scene} scale={MODELS[currentModel].scale} />
+      <primitive object={scene} scale={MODELS[currentModel].scale} />
     </group>
   );
 };

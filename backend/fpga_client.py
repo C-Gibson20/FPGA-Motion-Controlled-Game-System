@@ -24,18 +24,18 @@ def start_processing(client_socket):
             encoded_data = str(number).encode("utf-8")
             text = encoded_data.decode("utf-8", errors="ignore").strip()
 
-            command = f"B {text}"
-            print(command)
+            #command = f"B {text}"
+            #print(command)
             start_time = time.time()
         else:
             number = random.randint(0, 100)
             encoded_data = str(number).encode("utf-8")            
             text = encoded_data.decode("utf-8", errors="ignore").strip()
 
-            command = f"A {text}"
-            print(command)
+            #command = f"A {text}"
+            #print(command)
 
-        send_to_server(client_socket, command)
+        #send_to_server(client_socket, command)
 
         time.sleep(1)
 
