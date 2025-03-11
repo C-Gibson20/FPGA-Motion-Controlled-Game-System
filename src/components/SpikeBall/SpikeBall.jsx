@@ -90,18 +90,19 @@ const SpikeBall = ({
     // Get world positions of the spike ball and the player.
     const spikePos = new THREE.Vector3();
     spikeBallRef.current.getWorldPosition(spikePos);
-    spikePos.y += 0.35 
+    spikePos.y += 0.35
+    spikePos.x += 0.1
   
     const playerPos = new THREE.Vector3();
     playerRef.current.getWorldPosition(playerPos);
     playerPos.y += 0.7
   
     // Use the full Euclidean distance for collision detection.
-    const collisionThreshold = 0.2; // Adjust based on your model sizes.
-    if ((playerPos.distanceTo(spikePos)) < collisionThreshold && !hasScoredThisCycle.current) {
+    const collisionThreshold = 0.3; // Adjust based on your model sizes.
+    if (playerPos.distanceTo(spikePos) < collisionThreshold && !hasScoredThisCycle.current) {
       onCollision();
       hasScoredThisCycle.current = true;
-    } else if (spikePos.x < playerPos.x && !hasScoredThisCycle.current) {
+    } else if (spikePos.x < playerPos.x - 1 && !hasScoredThisCycle.current) {
       // The spike ball has passed the player without colliding.
       onSafePass();
       hasScoredThisCycle.current = true;
