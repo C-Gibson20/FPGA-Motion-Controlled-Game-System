@@ -2,26 +2,51 @@ import React, { useEffect, useState, useRef } from "react";
 import Arrow from "./Arrow.jsx";
 import Scoreboard from "../../pages/RythmGame/Scoreboard.jsx";
 import PlayerMario from "../Player/PlayerMario.jsx";
-import { Canvas } from "@react-three/fiber";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import "./Arrow.css";
+import { useGLTF, useTexture, useAnimations } from "@react-three/drei";
+import * as THREE from "three";
 
-// Includes space key for "Button"
+// Constants
 const INPUT_KEYS = ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", " "];
 const TARGET_X = 80;
 const HIT_WINDOW = 20;
-const ARROW_SPEED = 100;
-const SPAWN_INTERVAL = 1000;
-const INITIAL_ARROW_COUNT = 6;
+const ARROW_SPEED = 5;
+
+// Beatmap and Loop Timing
+const BEATMAP = [
+  { time: 0, type: "ArrowLeft" },
+  { time: 1000, type: "ArrowUp" },
+  { time: 2000, type: "ArrowRight" },
+  { time: 3000, type: " " },
+  { time: 4000, type: "ArrowDown" },
+];
+const LOOP_DURATION = 10000;
+
+const Background = () => {
+  const texture = useTexture("/images/disco.jpg");
+
+  // Ensure correct color encoding
+  texture.encoding = THREE.sRGBEncoding;
+  texture.colorSpace = THREE.SRGBColorSpace;
+
+  const { scene } = useThree();
+  useEffect(() => {
+    scene.background = texture;
+  }, [scene, texture]);
+
+  return null;
+};
 
 const ArrowGame = () => {
   const [score, setScore] = useState(0);
   const [feedback, setFeedback] = useState(null);
   const [arrows, setArrows] = useState([]);
   const arrowsRef = useRef([]);
-  const lastSpawnTime = useRef(performance.now());
   const feedbackTimeout = useRef(null);
   const arrowIdCounter = useRef(0);
   const inputLock = useRef(false);
+  const spawnedIndices = useRef(new Set());
 
   const [marioAnim, setMarioAnim] = useState({
     jumpLow: false,
@@ -35,36 +60,31 @@ const ArrowGame = () => {
     ArrowDown: 0,
     ArrowLeft: 0,
     ArrowRight: 0,
-    " ": 0, // Space bar ("Button") shares same lane for now
+    " ": 0,
   };
 
   useEffect(() => {
-    const DISTANCE_PER_ARROW = (SPAWN_INTERVAL / 1000) * ARROW_SPEED;
-    arrowsRef.current = Array.from({ length: INITIAL_ARROW_COUNT }).map((_, i) => {
-      const key = INPUT_KEYS[Math.floor(Math.random() * INPUT_KEYS.length)];
-      return {
-        id: arrowIdCounter.current++,
-        type: key,
-        position: {
-          x: window.innerWidth - i * DISTANCE_PER_ARROW,
-          y: arrowLanes[key],
-        },
-        missed: false,
-      };
-    });
-    setArrows([...arrowsRef.current]);
-  }, []);
-
-  useEffect(() => {
-    let lastTime = performance.now();
+    let lastFrameTime = performance.now();
+    const gameStart = performance.now();
+    let loopCount = 0;
 
     const animate = (now) => {
-      const delta = (now - lastTime) / 1000;
-      lastTime = now;
+      const delta = now - lastFrameTime;
+      lastFrameTime = now;
 
+      const elapsed = now - gameStart;
+      const currentLoopStart = loopCount * LOOP_DURATION;
+
+      // Check if it's time to start a new loop
+      if (elapsed > (loopCount + 1) * LOOP_DURATION) {
+        loopCount++;
+        spawnedIndices.current.clear();
+      }
+
+      // Move arrows
       arrowsRef.current = arrowsRef.current
         .map((arrow) => {
-          const newX = arrow.position.x - ARROW_SPEED * delta;
+          const newX = arrow.position.x - ARROW_SPEED * (delta / 16.67); // Normalize to 60fps
           if (!arrow.missed && newX < TARGET_X - HIT_WINDOW) {
             showFeedback("Miss", "red");
             return { ...arrow, missed: true, position: { ...arrow.position, x: newX } };
@@ -73,26 +93,31 @@ const ArrowGame = () => {
         })
         .filter((arrow) => arrow.position.x > -100);
 
-      while (now - lastSpawnTime.current >= SPAWN_INTERVAL) {
-        const key = INPUT_KEYS[Math.floor(Math.random() * INPUT_KEYS.length)];
-        arrowsRef.current.push({
-          id: arrowIdCounter.current++,
-          type: key,
-          position: {
-            x: window.innerWidth,
-            y: arrowLanes[key],
-          },
-          missed: false,
-        });
-        lastSpawnTime.current += SPAWN_INTERVAL;
-      }
+      // Spawn new arrows for this loop
+      BEATMAP.forEach((beat, index) => {
+        const beatTime = currentLoopStart + beat.time;
+        const spawnKey = `${loopCount}-${index}`;
+        if (elapsed >= beatTime && !spawnedIndices.current.has(spawnKey)) {
+          const key = beat.type;
+          arrowsRef.current.push({
+            id: arrowIdCounter.current++,
+            type: key,
+            position: {
+              x: window.innerWidth,
+              y: arrowLanes[key],
+            },
+            missed: false,
+          });
+          spawnedIndices.current.add(spawnKey);
+        }
+      });
 
       setArrows([...arrowsRef.current]);
       requestAnimationFrame(animate);
     };
 
     const animationId = requestAnimationFrame(animate);
-    return () => cancelAnimationId(animationId);
+    return () => cancelAnimationFrame(animationId);
   }, []);
 
   const showFeedback = (text, color) => {
@@ -123,7 +148,6 @@ const ArrowGame = () => {
       await sleep(400);
       setMarioAnim({ jumpLow: false, left: false, right: false, still: true });
     } else {
-      // No animation (e.g. for Button / Space bar)
       setMarioAnim({ jumpLow: false, left: false, right: false, still: true });
     }
 
@@ -171,7 +195,11 @@ const ArrowGame = () => {
       <div className="arrow-game-container">
         <div className="hit-line" style={{ left: `${TARGET_X}px` }} />
         {arrows.map((arrow) => (
-          <Arrow key={arrow.id} type={arrow.type === " " ? "Button" : arrow.type} position={arrow.position} />
+          <Arrow
+            key={arrow.id}
+            type={arrow.type === " " ? "Button" : arrow.type}
+            position={arrow.position}
+          />
         ))}
       </div>
 
@@ -192,6 +220,7 @@ const ArrowGame = () => {
         }}
         camera={{ position: [0, 0, 10], fov: 10 }}
       >
+        <Background/>
         <ambientLight intensity={4} />
         <PlayerMario
           username="Player"

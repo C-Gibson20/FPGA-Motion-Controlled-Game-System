@@ -1,49 +1,27 @@
 import React from 'react';
+import './GameSel.css'; // Import the CSS
+import bulletBarrageImg from '../../assets/spikeBallGame.png';
+import coinCascadeImg from '../../assets/coinGame.png';
+import discoDashImg from '../../assets/arrowGame.jpg';
 
 const GameSel = ({ setGameSel }) => {
-  const games = [
-    { name: 'Spike Ball', image: 'NEED AN IMAGE' },
-    { name: 'Coin Beat', image: 'NEED ANOTHER IMAGE' },
-    { name: 'Third game', image: 'NEED A THIRD IMAGE' },
+  const game = [
+    { name: 'Bullet Barrage', image: bulletBarrageImg },
+    { name: 'Coin Beat', image: coinCascadeImg },
+    { name: 'Disco Dash', image: discoDashImg },
   ];
 
-  const containerStyle = {
-    display: 'flex',
-    height: '100vh',
-  };
-
-  const blockStyle = {
-    flex: 1,
-    backgroundSize: 'cover',
-    backgroundPosition: 'center',
-    position: 'relative',
-    cursor: 'pointer',
-  };
-
-  const overlayStyle = {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-  };
-
-  const h1Style = { color: '#fff', fontSize: '3rem', textAlign: 'center' };
-
   return (
-    <div style={containerStyle}>
-      {games.map((game, idx) => (
+    <div className="game-selection-container">
+      {game.map((game, idx) => (
         <div
           key={idx}
-          style={{ ...blockStyle, backgroundImage: `url(${game.image})` }}
+          className="game-selection-block"
+          style={{ backgroundImage: `url(${game.image})` }}
           onClick={() => setGameSel(game.name)}
         >
-          <div style={overlayStyle}>
-            <h1 style={h1Style}>{game.name}</h1>
+          <div className="overlay">
+            <h1 className="game-selection-title">{game.name}</h1>
           </div>
         </div>
       ))}
@@ -52,4 +30,3 @@ const GameSel = ({ setGameSel }) => {
 };
 
 export default GameSel;
-
