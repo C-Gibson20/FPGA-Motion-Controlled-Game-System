@@ -65,7 +65,7 @@ const CoinGame = () => {
       >
         <Background />
         {/* Remove global lights */}
-        <RefactoredPlayerWaluigi
+        <PlayerMario
           username={playerData.username}
           initialPosition={playerData.position}
           isPlayerPlayer={true}
