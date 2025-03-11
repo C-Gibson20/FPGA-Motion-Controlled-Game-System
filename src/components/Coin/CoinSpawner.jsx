@@ -15,14 +15,12 @@ const getSpawnPositionNear = (basePosition) => {
   return [x, y, z];
 };
 
-// Provide default start positions if none (or fewer than two) are passed
 const defaultStartPositions = [
   [0, 0, 0],
   [1, 0, 0]
 ];
 
 const CoinSpawner = ({ startPositions, playerRef, onCoinCollect }) => {
-  // Use the provided startPositions if valid; otherwise fallback to defaultStartPositions.
   const effectiveStartPositions =
     startPositions && startPositions.length >= 2
       ? startPositions
@@ -44,30 +42,31 @@ const CoinSpawner = ({ startPositions, playerRef, onCoinCollect }) => {
       const id = Date.now();
       const gravity = Math.random() * (MAX_GRAVITY - MIN_GRAVITY) + MIN_GRAVITY;
 
-      setCoins((prev) => [...prev, { id, position, gravity }]);
+      setCoins(prev => [...prev, { id, position, gravity }]);
       coinVelocities.current[id] = 0;
     };
 
     intervalRef.current = setInterval(spawnCoin, 1000);
+
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
   }, [effectiveStartPositions]);
 
   const collectCoin = (coinId) => {
-    setCoins((prevCoins) => prevCoins.filter((coin) => coin.id !== coinId));
+    setCoins(prev => prev.filter(coin => coin.id !== coinId));
     delete coinVelocities.current[coinId];
     if (onCoinCollect) onCoinCollect();
     console.log("Coin collected!");
   };
 
   useFrame((state, delta) => {
-    if (!playerRef.current) return;
-    const playerPos = playerRef.current.position;
+    // Use optional chaining and a default value if playerRef.current is null.
+    const playerPos = playerRef?.current?.position || new THREE.Vector3(0, 0, 0);
 
-    setCoins((prevCoins) => {
+    setCoins(prevCoins => {
       const newCoins = [];
-      prevCoins.forEach((coin) => {
+      prevCoins.forEach(coin => {
         const id = coin.id;
         let [x, y, z] = coin.position;
         let velocity = coinVelocities.current[id] || 0;

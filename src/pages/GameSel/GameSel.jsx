@@ -7,7 +7,7 @@ import discoDashImg from '../../assets/arrowGame.jpg';
 const GameSel = ({ setGameSel }) => {
   const game = [
     { name: 'Bullet Barrage', image: bulletBarrageImg },
-    { name: 'Coin Beat', image: coinCascadeImg },
+    { name: 'Coin Cascade', image: coinCascadeImg },
     { name: 'Disco Dash', image: discoDashImg },
   ];
 

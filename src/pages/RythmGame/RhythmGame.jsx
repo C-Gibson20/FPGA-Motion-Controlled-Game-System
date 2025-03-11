@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
-import Scene from '../MiniGames/Scene.jsx';
 import SpikeBallGame from "../../components/SpikeBall/SpikeBallGame.jsx";
 import CoinGame from "../../components/Coin/CoinGame.jsx";
 import ArrowGame from "../../components/Arrow/ArrowGame.jsx";
 import Scoreboard from './Scoreboard.jsx';
 import "./RhythmGame.css";
 
+// The keys in GAMES must exactly match the names set in GameSel.
 const GAMES = {
   'Bullet Barrage': SpikeBallGame,
   'Coin Cascade': CoinGame,
@@ -18,7 +18,7 @@ const SPEED_UP_BEAT_INTERVAL = 2000;
 const HIT_WINDOW = 100;
 
 const RhythmGame = ({ gameSel, players = [], modifier, ws, onExit }) => {
-  // players is expected to be an array of names (e.g. ["Mario", "Waluigi"])
+  // players is expected to be an array of names, e.g. ["Mario", "Waluigi"]
   const [message, setMessage] = useState('');
   const [scores, setScores] = useState(players.map(() => 0));
   const [data, setData] = useState([]);
@@ -30,6 +30,7 @@ const RhythmGame = ({ gameSel, players = [], modifier, ws, onExit }) => {
   const missTimeoutRef = useRef(null);
   const hasPressedRef = useRef(false);
 
+  // Set beat interval based on modifier.
   let beatInterval = modifier === 'speed-up' ? SPEED_UP_BEAT_INTERVAL : DEFAULT_BEAT_INTERVAL;
   const hitTime = beatInterval / 2;
 
@@ -58,19 +59,32 @@ const RhythmGame = ({ gameSel, players = [], modifier, ws, onExit }) => {
         try {
           const payload = JSON.parse(event.data);
           if (payload.type === 'data') {
+            // If hit commands are sent, trigger hit.
             if (payload.button1 || payload.button2) {
-              // Trigger a hit for the specified player (assumes payload.player is 1-indexed)
               triggerHit(payload.player - 1);
             } else {
-              // Update FPGA controls for the specific player.
+              // Convert the payload.data value into control booleans.
+              const controls = { jump: false, left: false, right: false, still: false };
+              switch (payload.data) {
+                case 'J':
+                  controls.jump = true;
+                  break;
+                case 'L':
+                  controls.left = true;
+                  break;
+                case 'R':
+                  controls.right = true;
+                  break;
+                case 'N':
+                  controls.still = true;
+                  break;
+                default:
+                  break;
+              }
+              // Update fpgaControls for the given player (assumed 1-indexed)
               setFpgaControls(prev => ({
                 ...prev,
-                [payload.player]: {
-                  jump: payload.jump,
-                  left: payload.left,
-                  right: payload.right,
-                  still: payload.still,
-                }
+                [payload.player]: controls
               }));
             }
           }
@@ -82,6 +96,8 @@ const RhythmGame = ({ gameSel, players = [], modifier, ws, onExit }) => {
       return () => ws.removeEventListener("message", messageHandler);
     }
   }, [ws]);
+  
+  
 
   const startBeat = () => {
     beatRef.current = setInterval(() => {
@@ -139,18 +155,10 @@ const RhythmGame = ({ gameSel, players = [], modifier, ws, onExit }) => {
           ws={ws}
         />
       ) : (
-        <Scene
-          fpgaControls={fpgaControls}
-          players={players.map((name, index) => ({
-            username: name,
-            score: scores[index] || 0
-          }))}
-          scores={scores}
-          startPositions={[[0, 0, 0], [1, 0, 0]]}
-          onCoinCollect={() => console.log("Coin collected callback")}
-          localPlayerName={players[0]}
-          ws={ws}
-        />
+        // If no game is selected, display an error or a fallback screen.
+        <div style={{ color: "white", textAlign: "center", marginTop: "20px" }}>
+          No game selected.
+        </div>
       )}
 
       <button onClick={onExit} className="exit-button">✖</button>

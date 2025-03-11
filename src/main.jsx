@@ -16,7 +16,7 @@ import ArrowGame from "./components/Arrow/ArrowGame.jsx";
 
 const Games = {
   'Bullet Barrage': SpikeBallGame,
-  'Coin Beat': RhythmGame,
+  'Coin Cascade': CoinGame,
   'Disco Dash': ArrowGame
 };
 

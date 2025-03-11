@@ -1,82 +1,170 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { useGLTF, useTexture, useAnimations } from "@react-three/drei";
-import PlayerMario from "../Player/PlayerMario.jsx";
-import Player from "../Player/Player.jsx";
-import PlayerWaluigi from "../Player/PlayerWaluigi.jsx";
-import RefactoredPlayerMario from "../Player/RefactoredPlayerMario.jsx";
-import RefactoredPlayerWaluigi from "../Player/RefactoredPlayerWaluigi.jsx";
-import CoinSpawner from "./CoinSpawner.jsx"; // Your coin spawner component
-import Scoreboard from "../../pages/RythmGame/Scoreboard.jsx";
+import { Canvas, useThree } from "@react-three/fiber";
+import { useTexture } from "@react-three/drei";
 import * as THREE from "three";
-// import './Scene.css';
+import Scoreboard from "../../pages/RythmGame/Scoreboard.jsx";
+import PlayerMario from "../../components/Player/PlayerMario.jsx";
+import PlayerWaluigi from "../../components/Player/PlayerWaluigi.jsx";
+import CoinSpawner from "./CoinSpawner.jsx";
+import "./CoinGame.css";
 
 const Background = () => {
   const texture = useTexture("/images/Castel.jpg");
-
-  // Ensure correct color encoding
   texture.encoding = THREE.sRGBEncoding;
   texture.colorSpace = THREE.SRGBColorSpace;
-
   const { scene } = useThree();
   useEffect(() => {
     scene.background = texture;
   }, [scene, texture]);
-
   return null;
 };
 
-// This wrapper ensures that all its children are forced to layer 0 every frame.
 const CoinLayerGroup = ({ children, layer = 0 }) => {
   const groupRef = useRef();
-  useFrame(() => {
+  useEffect(() => {
     if (groupRef.current) {
-      groupRef.current.traverse((child) => {
-        child.layers.set(layer);
-      });
+      groupRef.current.traverse(child => child.layers.set(layer));
     }
   });
   return <group ref={groupRef}>{children}</group>;
 };
 
-const CoinGame = () => {
-  const [score, setScore] = useState(0);
-  const controlledPlayerRef = useRef();
+const CoinGame = ({
+  players = ["Mario", "Waluigi"],
+  fpgaControls,
+  ws,
+  localPlayerName = "Mario"
+}) => {
+  const numPlayers = players.length;
+  if (numPlayers === 0) return <div>No players</div>;
 
-  // Called when a coin is collected.
-  const handleCoinCollect = () => {
-    setScore((prevScore) => prevScore + 1);
+  // Initialize scores and lives arrays (one per player)
+  const [scores, setScores] = useState(Array(numPlayers).fill(0));
+  const [lives, setLives] = useState(Array(numPlayers).fill(2));
+  const [gameOver, setGameOver] = useState(false);
+
+  // Local score state for coin collection for the local player
+  const [localScore, setLocalScore] = useState(0);
+
+  // Create an array of refs for each player.
+  const controlledPlayerRefs = useRef([]);
+  useEffect(() => {
+    controlledPlayerRefs.current = Array(numPlayers)
+      .fill(null)
+      .map((_, i) => controlledPlayerRefs.current[i] || React.createRef());
+  }, [numPlayers]);
+
+  // Collision handling: update lives for the given player index.
+  const handleCoinCollision = (playerIndex) => {
+    setLives(prev => {
+      const updated = [...prev];
+      updated[playerIndex] = Math.max(updated[playerIndex] - 1, 0);
+      console.log(`💥 Collision for player ${playerIndex}: Lives: ${updated[playerIndex]}`);
+      if (updated[playerIndex] === 0) {
+        setGameOver(true);
+      }
+      return updated;
+    });
   };
 
-  const playerData = { username: "Player", position: [0, -0.7, 0] };
+  // Increase score when a coin is collected for the given player index.
+  const handleCoinCollect = (playerIndex) => {
+    // If it's the local player, update localScore.
+    if (players[playerIndex] === localPlayerName) {
+      setLocalScore(prev => prev + 1);
+    }
+    setScores(prev => {
+      const updated = [...prev];
+      updated[playerIndex] = updated[playerIndex] + 1;
+      console.log(`✅ Coin collected for player ${playerIndex}: Score: ${updated[playerIndex]}`);
+      return updated;
+    });
+  };
+
+  // Build an array of player objects.
+  const updatedPlayers = players.map((player, index) => {
+    // If player is a string, wrap it in an object.
+    const username = typeof player === "string" ? player : player.username;
+    return {
+      username,
+      position: [(-3 + index * (10 / Math.max(1, numPlayers))) * 0.3, -0.7, 0],
+      score: username === localPlayerName ? localScore : (scores[index] || 0),
+      avatar: index === 0 ? "/images/mario.png" : "/images/waluigi.png",
+    };
+  });
 
   return (
     <div style={{ width: "100vw", height: "100vh", position: "relative" }}>
-      <Scoreboard players={[{ username: playerData.username, score }]} />
+      <Scoreboard players={updatedPlayers} lives={lives} />
+
+      {gameOver && (
+        <div className="game-over-overlay">
+          <h1 className="title">
+            <span className="word"><span>G</span><span>A</span><span>M</span><span>E</span></span>
+            <span className="word"><span>O</span><span>V</span><span>E</span><span>R</span></span>
+          </h1>
+          <div className="game-over-score">Scores: {scores.join(" - ")}</div>
+        </div>
+      )}
+
       <Canvas
         shadows
         camera={{ position: [0, 0, 10], fov: 10 }}
         onCreated={({ camera }) => {
-          // Enable both layer 0 (for coins) and layer 1 (for the player and its light)
           camera.layers.enable(0);
           camera.layers.enable(1);
           camera.layers.enable(2);
         }}
+        style={{ display: "block" }}
       >
         <Background />
-        {/* Remove global lights */}
-        <PlayerMario
-          username={playerData.username}
-          initialPosition={playerData.position}
-          isPlayerPlayer={true}
-          playerRef={controlledPlayerRef}
-        />
-        {/* Wrap CoinSpawner so that its coins are forced to layer 0 */}
+        <ambientLight intensity={4} />
+        <directionalLight position={[10, 10, 5]} castShadow />
+
+        {updatedPlayers.map((player, index) => {
+          // Determine if this player is local.
+          const isLocal = player.username === localPlayerName;
+          if (index === 0) {
+            return (
+              <PlayerMario
+                key={`mario-${index}`}
+                username={player.username}
+                initialPosition={player.position}
+                isPlayerPlayer={isLocal}
+                jumpLow={fpgaControls?.[1]?.jump || false}
+                left={fpgaControls?.[1]?.left || false}
+                right={fpgaControls?.[1]?.right || false}
+                still={fpgaControls?.[1]?.still || false}
+                playerRef={isLocal ? controlledPlayerRefs.current[index] : undefined}
+                ws={ws}
+              />
+            );
+          } else if (index === 1) {
+            return (
+              <PlayerWaluigi
+                key={`waluigi-${index}`}
+                username={player.username}
+                initialPosition={player.position}
+                isPlayerPlayer={isLocal}
+                jumpLow={fpgaControls?.[2]?.jump || false}
+                left={fpgaControls?.[2]?.left || false}
+                right={fpgaControls?.[2]?.right || false}
+                still={fpgaControls?.[2]?.still || false}
+                playerRef={isLocal ? controlledPlayerRefs.current[index] : undefined}
+                ws={ws}
+              />
+            );
+          } else {
+            return null;
+          }
+        })}
+
         <CoinLayerGroup layer={2}>
           <CoinSpawner
-            startPositions={[playerData.position, playerData.position]}
-            playerRef={controlledPlayerRef}
-            onCoinCollect={handleCoinCollect}
+            startPositions={[[0, 0, 0], [1, 0, 0]]}
+            playerRef={controlledPlayerRefs.current[0] || undefined}
+            onCoinCollect={(playerIndex) => handleCoinCollect(playerIndex)}
+            onCollision={(playerIndex) => handleCoinCollision(playerIndex)}
           />
         </CoinLayerGroup>
       </Canvas>

@@ -8,7 +8,6 @@ import PlayerWaluigi from "../../components/Player/PlayerWaluigi.jsx";
 import SpikeBall from "./SpikeBall.jsx";
 import "./SpikeBallGame.css";
 
-// Background component remains the same.
 const Background = () => {
   const texture = useTexture("/images/Bowser.jpg");
   texture.encoding = THREE.sRGBEncoding;
@@ -20,17 +19,16 @@ const Background = () => {
   return null;
 };
 
-// Revised SpikeBallGame component with default props.
-const SpikeBallGame = ({ players = [], fpgaControls = {}, ws }) => {
+const SpikeBallGame = ({ players = ["Mario", "Waluigi"], fpgaControls = {}, ws }) => {
   const numPlayers = players.length;
   if (numPlayers === 0) return <div>No players</div>;
 
-  // Initialize scores and lives arrays for each player.
+  // Initialize scores and lives arrays
   const [scores, setScores] = useState(Array(numPlayers).fill(0));
   const [lives, setLives] = useState(Array(numPlayers).fill(2));
   const [gameOver, setGameOver] = useState(false);
 
-  // Create an array of refs—one for each player.
+  // Create an array of refs, one per player.
   const controlledPlayerRefs = useRef([]);
   useEffect(() => {
     controlledPlayerRefs.current = Array(numPlayers)
@@ -38,9 +36,9 @@ const SpikeBallGame = ({ players = [], fpgaControls = {}, ws }) => {
       .map((_, i) => controlledPlayerRefs.current[i] || React.createRef());
   }, [numPlayers]);
 
-  // Collision handling: update lives for the colliding player.
+  // Collision handling: update lives for the given player index.
   const handleSpikeCollision = (playerIndex) => {
-    setLives(prev => {
+    setLives((prev) => {
       const updated = [...prev];
       updated[playerIndex] = Math.max(updated[playerIndex] - 1, 0);
       console.log(`💥 Collision for player ${playerIndex}: Lives: ${updated[playerIndex]}`);
@@ -51,9 +49,9 @@ const SpikeBallGame = ({ players = [], fpgaControls = {}, ws }) => {
     });
   };
 
-  // Increase score for a safe pass.
+  // Increase score for a safe pass for the given player index.
   const handleSpikePass = (playerIndex) => {
-    setScores(prev => {
+    setScores((prev) => {
       const updated = [...prev];
       updated[playerIndex] = updated[playerIndex] + 1;
       console.log(`✅ Safe for player ${playerIndex}: Score: ${updated[playerIndex]}`);
@@ -70,7 +68,7 @@ const SpikeBallGame = ({ players = [], fpgaControls = {}, ws }) => {
 
   return (
     <div style={{ width: "100vw", height: "100vh", position: "relative" }}>
-      {/* Render Scoreboard once */}
+      {/* Render the Scoreboard once */}
       <Scoreboard players={updatedPlayers} lives={lives} />
 
       {gameOver && (
@@ -105,9 +103,8 @@ const SpikeBallGame = ({ players = [], fpgaControls = {}, ws }) => {
               <PlayerMario
                 key={`mario-${index}`}
                 username={name}
-                initialPosition={[-1, -0.7, 0]} // Adjust as needed
-                isPlayerPlayer={true}
-                // Use fpgaControls[1] or default to an empty object.
+                initialPosition={[-1, -0.7, 0]} // adjust as needed
+                isPlayerPlayer={true}  // for local control or FPGA control as needed
                 fpgaControls={fpgaControls[1] || {}}
                 playerRef={controlledPlayerRefs.current[index] || null}
                 ws={ws}
@@ -118,7 +115,7 @@ const SpikeBallGame = ({ players = [], fpgaControls = {}, ws }) => {
               <PlayerWaluigi
                 key={`waluigi-${index}`}
                 username={name}
-                initialPosition={[1, -0.7, 0]} // Adjust as needed
+                initialPosition={[1, -0.7, 0]} // adjust as needed
                 isPlayerPlayer={true}
                 fpgaControls={fpgaControls[2] || {}}
                 playerRef={controlledPlayerRefs.current[index] || null}
@@ -129,7 +126,15 @@ const SpikeBallGame = ({ players = [], fpgaControls = {}, ws }) => {
             return null;
           }
         })}
-        <SpikeBall />
+
+        {/* Render CoinSpawner and SpikeBall (assumed to work with callbacks that pass a player index) */}
+        <SpikeBall
+          speed={0.9}  // Adjust as needed; consider making this stateful if required.
+          // SpikeBall should internally call onCollision(playerIndex) and onSafePass(playerIndex)
+          onCollision={handleSpikeCollision}
+          onSafePass={handleSpikePass}
+          ws={ws}
+        />
       </Canvas>
     </div>
   );
