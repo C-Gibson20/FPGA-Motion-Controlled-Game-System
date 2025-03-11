@@ -3,7 +3,8 @@ import {
   FiArrowUp,
   FiArrowDown,
   FiArrowLeft,
-  FiArrowRight
+  FiArrowRight,
+  FiCircle
 } from "react-icons/fi";
 import "./Arrow.css";
 
@@ -13,6 +14,7 @@ const Arrow = ({ type, position }) => {
     ArrowDown: <FiArrowDown />,
     ArrowLeft: <FiArrowLeft />,
     ArrowRight: <FiArrowRight />,
+    Button: <FiCircle />
   };
 
   return (

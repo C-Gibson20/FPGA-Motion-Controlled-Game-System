@@ -35,12 +35,21 @@
     background-color: #333;
     border: 5px solid black;
     font-family: 'Luckiest Guy';
-  }
+    box-sizing: border-box;
+  }  
   
   .arrow-icon {
-    font-size: 4rem;
+    font-size: 2.5rem; /* Adjust for better fit */
+    line-height: 1;
     color: white;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    width: 100%;
   }
+  
   
   /* Optional: Direction-based styling */
   .arrow-ArrowUp {
@@ -54,6 +63,9 @@
   }
   .arrow-ArrowRight {
     background-color: #009500;
+  }
+  .arrow-Button {
+    background-color: purple;
   }
   
   
