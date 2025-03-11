@@ -32,8 +32,8 @@ function Root() {
 
   return (
     <StrictMode>
-      <ArrowGame />
-      {/* { <div className="container">
+      {/* <ArrowGame /> */}
+      <div className="container">
         {!gameStarted && !modifierPage && !showPopup ? (
           <Menu
             onStart={(selectedPlayers, ws) => {
@@ -82,7 +82,7 @@ function Root() {
             }}
           />
         )}
-      </div>} */}
+      </div>
     </StrictMode>
   );
 }

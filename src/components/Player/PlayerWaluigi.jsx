@@ -15,6 +15,9 @@ const PlayerWaluigi = ({ username, isPlayerPlayer, initialPosition, playerRef, j
   const groupRef = useRef();
   const activeAction = useRef(null);
 
+  // This ref tracks whether a jump has already been triggered.
+  const jumpTriggered = useRef(false);
+
   // Forward group ref for external access.
   useEffect(() => {
     if (playerRef) {
@@ -35,9 +38,9 @@ const PlayerWaluigi = ({ username, isPlayerPlayer, initialPosition, playerRef, j
   const { actions: rightSideStepActions } = useAnimations(rightSideStepAnimations, groupRef);
 
   const velocityY = useRef(0);
-  const speed = 0.02;
+  const speed = 0.01;
   const jumpStrength = 0.07;
-  const gravity = 0.004;
+  const gravity = 0.9;
   const isJumping = useRef(false);
   const keys = useRef({
     ArrowUp: false,
@@ -69,18 +72,22 @@ const PlayerWaluigi = ({ username, isPlayerPlayer, initialPosition, playerRef, j
     };
   }, [isPlayerPlayer]);
 
-  useFrame(() => {
+  useFrame((_, delta) => {
     if (!groupRef.current) return;
     let didMove = false;
     
-    // FPGA controls first.
-    if (jumpLow) {
-      if (!isJumping.current) {
-        isJumping.current = true;
-        velocityY.current = jumpStrength;
-        setCurrentModel("WaluigiJump");
-      }
+    // FPGA controls first: Trigger jump only once on the rising edge.
+    if (jumpLow && !jumpTriggered.current && !isJumping.current) {
+      jumpTriggered.current = true;
+      isJumping.current = true;
+      velocityY.current = jumpStrength;
+      setCurrentModel("WaluigiJump");
     }
+    if (!jumpLow) {
+      // Reset jump trigger once FPGA flag is off.
+      jumpTriggered.current = false;
+    }
+    
     if (left) {
       groupRef.current.position.x -= speed;
       if (currentModel !== "WaluigiSideStep") setCurrentModel("WaluigiSideStep");
@@ -94,7 +101,7 @@ const PlayerWaluigi = ({ username, isPlayerPlayer, initialPosition, playerRef, j
     if (still && !didMove && !isJumping.current && currentModel !== "WaluigiIdle") {
       setCurrentModel("WaluigiIdle");
     }
-    // Then keyboard controls (if local).
+    // Then apply keyboard controls (if local).
     if (isPlayerPlayer) {
       if (keys.current.ArrowLeft) {
         groupRef.current.position.x -= speed;
@@ -109,7 +116,7 @@ const PlayerWaluigi = ({ username, isPlayerPlayer, initialPosition, playerRef, j
     }
     if (isJumping.current) {
       groupRef.current.position.y += velocityY.current;
-      velocityY.current -= gravity;
+      velocityY.current -= gravity * delta;
       if (groupRef.current.position.y <= initialPosition[1]) {
         groupRef.current.position.y = initialPosition[1];
         isJumping.current = false;
@@ -120,6 +127,7 @@ const PlayerWaluigi = ({ username, isPlayerPlayer, initialPosition, playerRef, j
   });
 
   useEffect(() => {
+    // Fade out the previous animation.
     if (activeAction.current) {
       activeAction.current.fadeOut(0.2);
     }
@@ -128,14 +136,19 @@ const PlayerWaluigi = ({ username, isPlayerPlayer, initialPosition, playerRef, j
       action = idleActions["mixamo.com"] || Object.values(idleActions)[0];
     } else if (currentModel === "WaluigiJump") {
       action = jumpActions["mixamo.com"] || Object.values(jumpActions)[0];
+      if (action) {
+        action.setLoop(THREE.LoopOnce, 1);
+        action.clampWhenFinished = true;
+      }
     } else if (currentModel === "WaluigiSideStep") {
       action = sideStepActions["mixamo.com"] || Object.values(sideStepActions)[0];
+      if (action) action.setLoop(THREE.LoopRepeat, Infinity);
     } else if (currentModel === "WaluigiRightSideStep") {
       action = rightSideStepActions["mixamo.com"] || Object.values(rightSideStepActions)[0];
+      if (action) action.setLoop(THREE.LoopRepeat, Infinity);
     }
     if (action) {
       action.reset().fadeIn(0.2).play();
-      action.setLoop(THREE.LoopRepeat, Infinity);
       activeAction.current = action;
     }
   }, [currentModel, idleActions, jumpActions, sideStepActions, rightSideStepActions]);

@@ -192,7 +192,6 @@ const RhythmGame = ({ players, modifier, ws, onExit }) => {
           </div>
         </div>
       )}
-      <div className="game-message">{message}</div>
     </div>
   );
 };

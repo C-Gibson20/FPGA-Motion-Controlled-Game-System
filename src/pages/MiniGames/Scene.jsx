@@ -8,7 +8,8 @@ import CoinSpawner from "../../components/Coin/CoinSpawner";
 import * as THREE from "three";
 import PlayerMario from "../../components/Player/PlayerMario.jsx";
 import PlayerWaluigi from "../../components/Player/PlayerWaluigi.jsx";
-import Player from "../../components/Player/Player.jsx";
+import Scoreboard from "../../pages/RythmGame/Scoreboard.jsx";
+// import Player from "../../components/Player/Player.jsx";
 
 const Background = () => {
   const texture = useTexture("/images/Castel.jpg");
@@ -36,32 +37,13 @@ const CoinLayerGroup = ({ children, layer = 0 }) => {
   return <group ref={groupRef}>{children}</group>;
 };
 
-const Scoreboard = ({ players }) => {
-  return (
-    <div className="scoreboard">
-      <ul>
-        {players.map((p, index) => (
-          <li key={`${p.username}-${index}`} className="leaderboard-entry">
-            <img
-              src={p.avatar || "/images/default-avatar.png"}
-              alt={p.username}
-              className="player-avatar"
-            />
-            <div className="score-box">
-              <span className="player-score">{p.score}</span>
-            </div>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-};
-
 const FETCH_INTERVAL = 1000;
+
+// ... (imports and other code remain the same)
 
 const Scene = ({ fpgaControls, players, scores, startPositions, localPlayerName }) => {
   const [playerList, setPlayers] = useState([]);
-  // Local score state for coin collection
+  // Local score state for coin collection (for the local player)
   const [localScore, setLocalScore] = useState(0);
   const localPlayerRef = useRef();
 
@@ -74,7 +56,7 @@ const Scene = ({ fpgaControls, players, scores, startPositions, localPlayerName 
 
   // Update the local score when a coin is collected.
   const handleCoinCollect = () => {
-    setLocalScore((prevScore) => prevScore + 1);
+    setLocalScore((prev) => prev + 1);
     console.log("Coin collected!");
   };
 
@@ -87,9 +69,10 @@ const Scene = ({ fpgaControls, players, scores, startPositions, localPlayerName 
     return {
       ...player,
       position: [xPos, -0.7, 0],
-      // Use the localScore for the local player.
+      // For the local player, use localScore; otherwise, use the parent's scores array.
       score: player.username === localPlayerName ? localScore : (scores[index] || 0),
-      avatar: player.avatar || "/images/default-avatar.png",
+      // Force the default avatars for 2 players.
+      avatar: index === 0 ? "/images/mario.png" : "/images/waluigi.png",
     };
   });
 
@@ -98,15 +81,15 @@ const Scene = ({ fpgaControls, players, scores, startPositions, localPlayerName 
       <Scoreboard players={updatedPlayers} />
 
       <Canvas 
-      shadows 
-      camera={{ position: [0, 0, 10], fov: 10 }} 
-      onCreated={({ camera }) => {
-        // Enable both layer 0 (for coins) and layer 1 (for the player and its light)
-        camera.layers.enable(0);
-        camera.layers.enable(1);
-        camera.layers.enable(2);
-      }}
-      style={{ display: "block" }}>
+        shadows 
+        camera={{ position: [0, 0, 10], fov: 10 }}
+        onCreated={({ camera }) => {
+          camera.layers.enable(0);
+          camera.layers.enable(1);
+          camera.layers.enable(2);
+        }}
+        style={{ display: "block" }}
+      >
         <Background />
         <ambientLight intensity={4} />
         <directionalLight position={[10, 10, 5]} castShadow />
@@ -141,15 +124,16 @@ const Scene = ({ fpgaControls, players, scores, startPositions, localPlayerName 
                 playerRef={player.username === localPlayerName ? localPlayerRef : undefined}
               />
             );
-          } 
+          } else {
+            return null;
+          }
         })}
-        <CoinLayerGroup layer={2}>
-          <CoinSpawner
-            startPositions={startPositions || updatedPlayers.map((p) => p.position)}
-            playerRef={localPlayerRef}
-            onCoinCollect={handleCoinCollect}
-          />
-        </CoinLayerGroup>
+
+        <CoinSpawner 
+          startPositions={startPositions || updatedPlayers.map((p) => p.position)}
+          playerRef={localPlayerRef}
+          onCoinCollect={handleCoinCollect}
+        />
       </Canvas>
     </div>
   );

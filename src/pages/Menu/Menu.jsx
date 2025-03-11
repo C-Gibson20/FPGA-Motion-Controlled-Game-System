@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './Menu.css';
 import ConnectionPopup from '../ConnexionPopup/ConnectionPopup.jsx';
 
@@ -49,6 +49,7 @@ const Menu = ({ onStart }) => {
         setPlayerConnections(prev => ({ ...prev, [data.player]: data.address }));
       } else if (data.type === "all_connected") {
         console.log("All FPGA connections established:", data.players);
+        // Even if "all_connected" is received, we also rely on our useEffect below.
       } else if (data.type === "data") {
         console.log(`Data from player ${data.player}:`, data.data);
         // Handle incoming FPGA data as needed.
@@ -56,15 +57,22 @@ const Menu = ({ onStart }) => {
     };
   };
 
-  // This function is called when the user clicks "Start Game" in the popup.
-  // This function is called when the user clicks "Start Game" in the popup.
+  // useEffect to monitor connections for multiplayer mode.
+  useEffect(() => {
+    // Only check in multiplayer mode.
+    if (numPlayers > 1 && Object.keys(playerConnections).length === numPlayers && ws) {
+      console.log("All players connected via useEffect:", playerConnections);
+      onStart(playerNames, ws);
+      setShowPopup(false);
+    }
+  }, [playerConnections, numPlayers, ws, playerNames, onStart]);
+
+  // This function is called when the user clicks "Start Game" in the popup (for solo or manual start).
   const handleGameStart = () => {
     console.log("Starting game with players:", playerNames);
-    // Call the parent's onStart callback with both player names and ws.
     onStart(playerNames, ws);
     setShowPopup(false);
   };
-
 
   return (
     <div className="menu-container">
@@ -108,13 +116,10 @@ const Menu = ({ onStart }) => {
           className="input-field"
         />
       ))}
-      {numPlayers > 1 ?
       <button onClick={handleStartConnection} className="start-button">
         Connect to Players
       </button>
-      : <button onClick={handleGameStart} className="start-button">
-        Play Solo
-      </button>}
+
       {showPopup && (
         <ConnectionPopup
           isConnected={isConnected}
