@@ -47,7 +47,7 @@ const SmokeTrail = ({ followRef }) => {
 
 // SpikeBall Component
 const SpikeBall = ({
-  position = [0.65, -0.35 , 0],
+  position = [1.5, -0.35 , 0],
   onFire = () => {},
   playerRef,
   speed,

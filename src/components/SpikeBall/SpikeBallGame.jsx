@@ -22,7 +22,7 @@ const Background = () => {
 };
 
 const SpikeBallGame = () => {
-  const [speed, setSpeed] = useState(0.5);
+  const [speed, setSpeed] = useState(0.9);
   const [score, setScore] = useState(0);
   const [lives, setLives] = useState(2);
   const [gameOver, setGameOver] = useState(false);
