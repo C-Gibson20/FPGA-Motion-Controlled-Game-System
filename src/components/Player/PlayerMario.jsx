@@ -75,7 +75,7 @@ const PlayerMario = ({ username, isPlayerPlayer, initialPosition, playerRef, jum
     };
   }, [isPlayerPlayer]);
 
-  useFrame(() => {
+  useFrame((_, delta) => {
     if (!groupRef.current) return;
     let didMove = false;
 
@@ -115,10 +115,13 @@ const PlayerMario = ({ username, isPlayerPlayer, initialPosition, playerRef, jum
       }
     }
 
+    // const MOVE_CNST = 0.2;
+    // let moveAmount = delta * MOVE_CNST;
+
     // Update jumping motion.
     if (isJumping.current) {
       groupRef.current.position.y += velocityY.current;
-      velocityY.current -= gravity;
+      velocityY.current -= 0.3 * delta * gravity;
       if (groupRef.current.position.y <= initialPosition[1]) {
         groupRef.current.position.y = initialPosition[1];
         isJumping.current = false;

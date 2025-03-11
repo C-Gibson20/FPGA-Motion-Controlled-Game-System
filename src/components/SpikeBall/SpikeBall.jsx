@@ -50,6 +50,7 @@ const SpikeBall = ({
   position = [0.65, -0.35 , 0],
   onFire = () => {},
   playerRef,
+  speed,
   onCollision = () => {},
   onSafePass = () => {},
 }) => {
@@ -77,9 +78,9 @@ const SpikeBall = ({
 
   useFrame((_, delta) => {
     if (!groupRef.current || !playerRef?.current || !spikeBallRef.current) return;
-  
+
     // Move the spike ball along the x-axis.
-    posX.current -= delta * 0.8;
+    posX.current -= delta * speed;
     if (posX.current < -2) {
       posX.current = 2;
       hasScoredThisCycle.current = false; // Reset for a new cycle.

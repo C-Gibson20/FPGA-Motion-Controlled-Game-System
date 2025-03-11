@@ -22,14 +22,11 @@ const Background = () => {
 };
 
 const SpikeBallGame = () => {
+  const [speed, setSpeed] = useState(0.5);
   const [score, setScore] = useState(0);
   const [lives, setLives] = useState(2);
   const [gameOver, setGameOver] = useState(false);
   const controlledPlayerRef = useRef();
-
-  const handleCoinCollect = () => {
-    setScore((prev) => prev + 1);
-  };
 
   const handleSpikeCollision = () => {
     setLives((prev) => {
@@ -44,6 +41,7 @@ const SpikeBallGame = () => {
 
   const handleSpikePass = () => {
     setScore((prev) => prev + 1);
+    setSpeed(prev => prev + 0.1)
     console.log("✅ Safe! Score:", score + 1);
   };
 
@@ -90,6 +88,7 @@ const SpikeBallGame = () => {
           playerRef={controlledPlayerRef}
         />
         <SpikeBall
+          speed={speed}
           playerRef={controlledPlayerRef}
           onCollision={handleSpikeCollision}
           onSafePass={handleSpikePass}

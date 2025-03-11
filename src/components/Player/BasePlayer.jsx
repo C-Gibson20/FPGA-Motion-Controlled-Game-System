@@ -105,7 +105,7 @@ const BasePlayer = ({
   }, [isPlayerPlayer]);
 
   // Update movement and jump physics on each frame
-  useFrame(() => {
+  useFrame((_, delta) => {
     if (!isPlayerPlayer || !groupRef.current) return;
     let moving = false;
     // Horizontal movement
@@ -126,18 +126,18 @@ const BasePlayer = ({
     // Vertical movement if "full" movement is enabled.
     if (movement === "full") {
       if (keys.current.ArrowUp) {
-        groupRef.current.position.y += speed;
+        groupRef.current.position.y += delta * speed;
         moving = true;
       }
       if (keys.current.ArrowDown) {
-        groupRef.current.position.y -= speed;
+        groupRef.current.position.y -= delta * speed;
         moving = true;
       }
     }
     // Handle jump physics
     if (isJumping.current) {
-      groupRef.current.position.y += velocityY.current;
-      velocityY.current -= gravity;
+      groupRef.current.position.y += delta * velocityY.current;
+      velocityY.current -= delta * gravity;
       if (groupRef.current.position.y <= initialPosition[1]) {
         groupRef.current.position.y = initialPosition[1];
         isJumping.current = false;

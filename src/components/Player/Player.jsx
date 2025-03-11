@@ -86,35 +86,39 @@ const Player = ({ username, isPlayerPlayer, initialPosition, playerRef }) => {
     };
   }, [isPlayerPlayer]);
 
-    useFrame(() => {
+    const BASE_SPEED = 40;
+
+    useFrame((_, delta) => {
         if (!isPlayerPlayer || !groupRef.current) return;
     
         let moving = false;
+
+        delta *= BASE_SPEED;
     
         // Handle movement
         if (keys.current.ArrowUp) {
-            groupRef.current.position.y += speed;
+            groupRef.current.position.y += delta * speed;
             moving = true;
         }
         if (keys.current.ArrowDown) {
-            groupRef.current.position.y -= speed;
+            groupRef.current.position.y -= delta * speed;
             moving = true;
         }
         if (keys.current.ArrowLeft) {
-            groupRef.current.position.x -= speed;
+            groupRef.current.position.x -= delta * speed;
             if (currentModel !== "MarioSideStep") setCurrentModel("MarioSideStep");
             moving = true;
         }
         if (keys.current.ArrowRight) {
-            groupRef.current.position.x += speed;
+            groupRef.current.position.x += delta * speed;
             if (currentModel !== "MarioSideStep") setCurrentModel("MarioSideStep");
             moving = true;
         }
     
         // Handle jumping
         if (isJumping.current) {
-            groupRef.current.position.y += velocityY.current;
-            velocityY.current -= gravity;
+            groupRef.current.position.y += delta * velocityY.current;
+            velocityY.current -= delta * gravity;
     
             if (groupRef.current.position.y <= initialPosition[1]) {
                 groupRef.current.position.y = initialPosition[1];
