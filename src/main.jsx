@@ -15,7 +15,7 @@ import Arrow from "./components/Arrow/Arrow.jsx";
 import ArrowGame from "./components/Arrow/ArrowGame.jsx";
 
 const Games = {
-  'Spike Ball': SpikeBallGame,
+  'Bullet Barrage': SpikeBallGame,
   'Coin Beat': CoinGame,
   'Arrow Game': ArrowGame
 };
