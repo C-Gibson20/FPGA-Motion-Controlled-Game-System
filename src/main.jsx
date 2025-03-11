@@ -11,6 +11,8 @@ import CoinGame from "./components/Coin/CoinGame.jsx";
 import "./pages/Menu/Menu.css";
 import "./pages/RythmGame/RhythmGame.css";
 import "./pages/ModifierPage/ModifierPage.css";
+import Arrow from "./components/Arrow/arrow.jsx";
+import ArrowGame from "./components/Arrow/ArrowGame.jsx";
 
 const Games = {
   'Spike Ball': SpikeBallGame,
@@ -30,7 +32,8 @@ function Root() {
 
   return (
     <StrictMode>
-      { <div className="container">
+      {/* <ArrowGame /> */}
+      <div className="container">
         {!gameStarted && !modifierPage && !showPopup ? (
           <Menu
             onStart={(selectedPlayers, ws) => {
@@ -79,7 +82,7 @@ function Root() {
             }}
           />
         )}
-      </div>}
+      </div>
     </StrictMode>
   );
 }

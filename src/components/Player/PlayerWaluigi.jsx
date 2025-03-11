@@ -38,7 +38,7 @@ const PlayerWaluigi = ({ username, isPlayerPlayer, initialPosition, playerRef, j
   const { actions: rightSideStepActions } = useAnimations(rightSideStepAnimations, groupRef);
 
   const velocityY = useRef(0);
-  const speed = 0.001;
+  const speed = 0.01;
   const jumpStrength = 0.07;
   const gravity = 0.9;
   const isJumping = useRef(false);
