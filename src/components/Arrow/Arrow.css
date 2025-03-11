@@ -11,13 +11,10 @@
   
   .arrow-game-container {
     position: absolute;
-    top: 0;
+    top: 1rem;
     left: 0;
     width: 100%;
-    height: 7rem; /* Arrow band at the top */
-    border-bottom: 2px solid black;
-    overflow: hidden;
-    background: white;
+    height: 8rem; 
     z-index: 10;
   }
   
@@ -31,17 +28,16 @@
     justify-content: center;
     border-radius: 0.75rem;
     transition: transform 0.05s linear;
-    will-change: transform;
-    background-color: #333;
-    border: 5px solid black;
+    will-change: transform; 
+    border: 5px solid white;
     font-family: 'Luckiest Guy';
     box-sizing: border-box;
   }  
   
   .arrow-icon {
-    font-size: 2.5rem; /* Adjust for better fit */
+    font-size: 3rem; /* Adjust for better fit */
     line-height: 1;
-    color: white;
+    color: black;
     text-align: center;
     display: flex;
     align-items: center;
@@ -71,11 +67,10 @@
   
   .hit-line {
     position: absolute;
-    top: 1px;
     width: 6px;
-    height: 96%;
-    background-color: red;
-    border: 2px solid white;
+    height: 100%;
+    background-color: #ECECEC;
+    border: 3px solid white;
     border-radius: 4px;
   }
   
@@ -86,16 +81,15 @@
     top: 0;
     width: 40px;
     height: 100%;
-    background: rgba(50, 50, 50, 0.2);
+    background: rgba(256, 256, 256, 0.5);
     border-radius: 4px;
     pointer-events: none;
+    z-index: 999;
   }
   
   .hit-feedback {
     position: absolute;
-    top: 10rem; /* Appears just under the 7rem arrow band */
     left: 50%;
-    /* transform: translateX(-50%); */
     font-size: 4rem;
     font-weight: bold;
     animation: pulseFade 0.6s ease-out;
@@ -120,4 +114,6 @@
       transform: translateX(-50%) scale(1);
     }
   }
+
+  
   

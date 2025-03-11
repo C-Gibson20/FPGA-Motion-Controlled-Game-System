@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from "react";
 import Arrow from "./Arrow.jsx";
 import Scoreboard from "../../pages/RythmGame/Scoreboard.jsx";
 import PlayerMario from "../Player/PlayerMario.jsx";
-import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import { Canvas, useThree } from "@react-three/fiber";
 import "./Arrow.css";
 import { useGLTF, useTexture, useAnimations } from "@react-three/drei";
 import * as THREE from "three";
@@ -11,22 +11,20 @@ import * as THREE from "three";
 const INPUT_KEYS = ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", " "];
 const TARGET_X = 80;
 const HIT_WINDOW = 20;
-const ARROW_SPEED = 5;
+const ARROW_SPEED = 5; // visual speed
+const LOOP_DURATION = 5500;
 
-// Beatmap and Loop Timing
 const BEATMAP = [
   { time: 0, type: "ArrowLeft" },
-  { time: 1000, type: "ArrowUp" },
-  { time: 2000, type: "ArrowRight" },
-  { time: 3000, type: " " },
-  { time: 4000, type: "ArrowDown" },
+  { time: 400, type: "ArrowUp" },
+  { time: 1000, type: "ArrowRight" },
+  { time: 1300, type: " " },
+  { time: 2200, type: "ArrowDown" },
 ];
-const LOOP_DURATION = 10000;
 
 const Background = () => {
   const texture = useTexture("/images/disco.jpg");
 
-  // Ensure correct color encoding
   texture.encoding = THREE.sRGBEncoding;
   texture.colorSpace = THREE.SRGBColorSpace;
 
@@ -46,7 +44,7 @@ const ArrowGame = () => {
   const feedbackTimeout = useRef(null);
   const arrowIdCounter = useRef(0);
   const inputLock = useRef(false);
-  const spawnedIndices = useRef(new Set());
+  const spawnedIndices = useRef({ loop: null, set: new Set() });
 
   const [marioAnim, setMarioAnim] = useState({
     jumpLow: false,
@@ -63,28 +61,35 @@ const ArrowGame = () => {
     " ": 0,
   };
 
+  const getCurrentLoopInfo = (elapsed) => {
+    const loopNumber = Math.floor(elapsed / LOOP_DURATION);
+    const loopStart = loopNumber * LOOP_DURATION;
+    return { loopNumber, loopStart };
+  };
+
   useEffect(() => {
     let lastFrameTime = performance.now();
     const gameStart = performance.now();
-    let loopCount = 0;
 
     const animate = (now) => {
       const delta = now - lastFrameTime;
+      const elapsed = now - gameStart;
       lastFrameTime = now;
 
-      const elapsed = now - gameStart;
-      const currentLoopStart = loopCount * LOOP_DURATION;
+      const secondsDelta = delta / 1000;
+      const speed = ARROW_SPEED * 60;
 
-      // Check if it's time to start a new loop
-      if (elapsed > (loopCount + 1) * LOOP_DURATION) {
-        loopCount++;
-        spawnedIndices.current.clear();
+      const { loopNumber, loopStart } = getCurrentLoopInfo(elapsed);
+
+      // Reset spawn tracking when loop changes
+      if (spawnedIndices.current.loop !== loopNumber) {
+        spawnedIndices.current = { loop: loopNumber, set: new Set() };
       }
 
       // Move arrows
       arrowsRef.current = arrowsRef.current
         .map((arrow) => {
-          const newX = arrow.position.x - ARROW_SPEED * (delta / 16.67); // Normalize to 60fps
+          const newX = arrow.position.x - speed * secondsDelta;
           if (!arrow.missed && newX < TARGET_X - HIT_WINDOW) {
             showFeedback("Miss", "red");
             return { ...arrow, missed: true, position: { ...arrow.position, x: newX } };
@@ -93,11 +98,17 @@ const ArrowGame = () => {
         })
         .filter((arrow) => arrow.position.x > -100);
 
-      // Spawn new arrows for this loop
+      // Spawn arrows for this loop only at correct time
       BEATMAP.forEach((beat, index) => {
-        const beatTime = currentLoopStart + beat.time;
-        const spawnKey = `${loopCount}-${index}`;
-        if (elapsed >= beatTime && !spawnedIndices.current.has(spawnKey)) {
+        const beatTime = loopStart + beat.time;
+        const spawnKey = `${loopNumber}-${index}`;
+        const timeUntilBeat = beatTime - elapsed;
+
+        if (
+          timeUntilBeat <= 0 &&
+          timeUntilBeat > -16.67 &&
+          !spawnedIndices.current.set.has(spawnKey)
+        ) {
           const key = beat.type;
           arrowsRef.current.push({
             id: arrowIdCounter.current++,
@@ -108,7 +119,7 @@ const ArrowGame = () => {
             },
             missed: false,
           });
-          spawnedIndices.current.add(spawnKey);
+          spawnedIndices.current.set.add(spawnKey);
         }
       });
 
@@ -220,7 +231,7 @@ const ArrowGame = () => {
         }}
         camera={{ position: [0, 0, 10], fov: 10 }}
       >
-        <Background/>
+        <Background />
         <ambientLight intensity={4} />
         <PlayerMario
           username="Player"
