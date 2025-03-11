@@ -2,12 +2,15 @@ import React, { useRef, useEffect, useState } from "react";
 import { useGLTF, useAnimations } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
+import {playJumpSound} from "../Sounds/Sounds.jsx";
 
 const MODELS = {
   MarioIdle: { path: "/models/MarioIdle.glb", scale: 0.003 },
   MarioJump: { path: "/models/MarioJump.glb", scale: 0.003 },
-  MarioSideStep: { path: "/models/MarioSideStep.glb", scale: 0.003 },
-  MarioRightSideStep: { path: "/models/MarioRightSideStep.glb", scale: 0.003 },
+  MarioSideStep: { path: "/models/MarioLeftStep.glb", scale: 0.003 },
+  MarioRightSideStep: { path: "/models/MarioRightStep.glb", scale: 0.003 },
+  MarioBackFlip: { path: "/models/MarioBackFlip.glb", scale: 0.003 },
+  MarioVictory: { path: "/models/MarioVictory.glb", scale: 0.003 },
 };
 
 const PlayerMario = ({ username, isPlayerPlayer, initialPosition, playerRef, jumpLow, left, right, still }) => {
@@ -62,6 +65,7 @@ const PlayerMario = ({ username, isPlayerPlayer, initialPosition, playerRef, jum
         isJumping.current = true;
         velocityY.current = jumpStrength;
         setCurrentModel("MarioJump");
+        playJumpSound();
       }
     };
 
@@ -89,6 +93,7 @@ const PlayerMario = ({ username, isPlayerPlayer, initialPosition, playerRef, jum
         isJumping.current = true;
         velocityY.current = jumpStrength;
         setCurrentModel("MarioJump");
+        playJumpSound();
       }
     } else {
       // Reset our trigger when jumpLow is false.

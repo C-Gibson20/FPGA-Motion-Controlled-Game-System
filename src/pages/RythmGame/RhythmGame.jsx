@@ -67,7 +67,6 @@ const RhythmGame = ({ gameSel, players = [], modifier, ws, onExit }) => {
               const controls = { jump: false, left: false, right: false, still: false };
               switch (payload.data) {
                 case 'J':
-                  console.log("JUMMMPP", event.data);
                   controls.jump = true;
                   break;
                 case 'L':
@@ -78,6 +77,10 @@ const RhythmGame = ({ gameSel, players = [], modifier, ws, onExit }) => {
                   break;
                 case 'N':
                   controls.still = true;
+                  break;
+                case 'B1':
+                  // Check: is this intended to also be a jump, or should it be a different control?
+                  controls.jump = true;
                   break;
                 default:
                   break;

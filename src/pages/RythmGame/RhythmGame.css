@@ -9,7 +9,11 @@
 }
 
 .game-container {
-    background: white;
+    background: url('../../assets/Game_Background_3.jpg');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    text-align: center;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -214,6 +218,7 @@
     position: absolute;
     top: 5px;
     left: 10px;
+    z-index: 100;
     margin-top: 15px;
     padding: 2px 4px;
     background: #ffcc00;

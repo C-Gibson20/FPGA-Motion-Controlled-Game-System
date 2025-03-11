@@ -113,7 +113,7 @@ const CoinGame = ({
         style={{ display: "block" }}
       >
         <Background />
-        <ambientLight intensity={4} />
+        {/* <ambientLight intensity={4} /> */}
         <directionalLight position={[10, 10, 5]} castShadow />
 
         {updatedPlayers.map((player, index) => {

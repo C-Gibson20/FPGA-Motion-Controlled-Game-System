@@ -4,7 +4,7 @@ import bulletBarrageImg from '../../assets/spikeBallGame.png';
 import coinCascadeImg from '../../assets/coinGame.png';
 import discoDashImg from '../../assets/arrowGame.jpg';
 
-const GameSel = ({ setGameSel }) => {
+const GameSel = ({ setGameSel, onExit }) => {
   const game = [
     { name: 'Bullet Barrage', image: bulletBarrageImg },
     { name: 'Coin Cascade', image: coinCascadeImg },
@@ -25,6 +25,8 @@ const GameSel = ({ setGameSel }) => {
           </div>
         </div>
       ))}
+
+      <button onClick={onExit} className="exit-button">✖</button>
     </div>
   );
 };

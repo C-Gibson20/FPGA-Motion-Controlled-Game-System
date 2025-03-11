@@ -29,15 +29,15 @@ function Root() {
               setWsInstance(ws);
               setGameSel(null);
               // For multiplayer, show the connection popup; otherwise, go directly to modifier.
-              if (selectedPlayers.length === 2) {
-                setShowPopup(true);
-              } else {
-                setModifierPage(true);
-              }
+              setShowPopup(true);
+              setModifierPage(true);
             }}
           />
         ) : !gameStarted && !gameSel ? (
-          <GameSel setGameSel={setGameSel} />
+          <GameSel setGameSel={setGameSel} onExit={() => {
+            setModifierPage(false)
+            setShowPopup(false)
+          }} />
         ) : !gameStarted && gameSel && modifierPage ? (
           <ModifierPage
             onSelect={(selectedModifier) => {
@@ -54,20 +54,10 @@ function Root() {
             ws={wsInstance}
             onExit={() => {
               setGameStarted(false);
-              setModifierPage(false);
+              setGameSel(null);
             }}
           />
         ) : null}
-
-        {showPopup && (
-          <ConnectionPopup
-            onPlayersConnected={() => {}}
-            onClose={() => {
-              setShowPopup(false);
-              setModifierPage(true);
-            }}
-          />
-        )}
       </div>
     </StrictMode>
   );

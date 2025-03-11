@@ -2,12 +2,13 @@ import React, { useRef, useEffect, useState } from "react";
 import { useGLTF, useAnimations } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
+import {playJumpSound} from "../Sounds/Sounds.jsx";
 
 const MODELS = {
   WaluigiIdle: { path: "/models/WaluigiIdle.glb", scale: 0.004 },
   WaluigiJump: { path: "/models/WaluigiJump.glb", scale: 0.004 },
   WaluigiSideStep: { path: "/models/WaluigiSideStep.glb", scale: 0.004 },
-  WaluigiRightSideStep: { path: "/models/WaluigiRightSideStep.glb", scale: 0.004 },
+  WaluigiRightSideStep: { path: "/models/WaluigiRightStep.glb", scale: 0.004 },
 };
 
 const PlayerWaluigi = ({ username, isPlayerPlayer, initialPosition, playerRef, jumpLow, left, right, still }) => {
@@ -38,7 +39,7 @@ const PlayerWaluigi = ({ username, isPlayerPlayer, initialPosition, playerRef, j
   const { actions: rightSideStepActions } = useAnimations(rightSideStepAnimations, groupRef);
 
   const velocityY = useRef(0);
-  const speed = 0.01;
+  const speed = 0.005;
   const jumpStrength = 0.07;
   const gravity = 0.9;
   const isJumping = useRef(false);
@@ -59,6 +60,7 @@ const PlayerWaluigi = ({ username, isPlayerPlayer, initialPosition, playerRef, j
         isJumping.current = true;
         velocityY.current = jumpStrength;
         setCurrentModel("WaluigiJump");
+        playJumpSound();
       }
     };
     const handleKeyUp = (e) => {
@@ -82,6 +84,7 @@ const PlayerWaluigi = ({ username, isPlayerPlayer, initialPosition, playerRef, j
       isJumping.current = true;
       velocityY.current = jumpStrength;
       setCurrentModel("WaluigiJump");
+      playJumpSound();
     }
     if (!jumpLow) {
       // Reset jump trigger once FPGA flag is off.
@@ -116,7 +119,7 @@ const PlayerWaluigi = ({ username, isPlayerPlayer, initialPosition, playerRef, j
     }
     if (isJumping.current) {
       groupRef.current.position.y += velocityY.current;
-      velocityY.current -= gravity * delta;
+      velocityY.current -= 0.3 * gravity * delta;
       if (groupRef.current.position.y <= initialPosition[1]) {
         groupRef.current.position.y = initialPosition[1];
         isJumping.current = false;

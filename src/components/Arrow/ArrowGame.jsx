@@ -10,17 +10,35 @@ import * as THREE from "three";
 // Constants
 const INPUT_KEYS = ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", " "];
 const TARGET_X = 80;
-const HIT_WINDOW = 20;
+const HIT_WINDOW = 40;
 const ARROW_SPEED = 5; // visual speed
 const LOOP_DURATION = 5500;
 
 const BEATMAP = [
-  { time: 0, type: "ArrowLeft" },
-  { time: 400, type: "ArrowUp" },
-  { time: 1000, type: "ArrowRight" },
-  { time: 1300, type: " " },
-  { time: 2200, type: "ArrowDown" },
+  // Intro (0 - 6000ms)
+  { time: 0, type: "ArrowUp" },
+  { time: 1500, type: "ArrowLeft" },
+  { time: 3000, type: "ArrowDown" },
+  { time: 4500, type: "ArrowRight" },
+  { time: 6000, type: " " },
+
+  // Main Section (6000 - 18000ms)
+  { time: 7500, type: "ArrowUp" },
+  { time: 9000, type: "ArrowLeft" },
+  { time: 10500, type: "ArrowDown" },
+  { time: 12000, type: "ArrowRight" },
+  { time: 13500, type: "ArrowUp" },
+  { time: 15000, type: "ArrowLeft" },
+  { time: 16500, type: "ArrowDown" },
+  { time: 18000, type: "ArrowRight" },
+  
+  // Outro/Transition (18000 - 24000ms)
+  { time: 19500, type: " " },
+  { time: 21000, type: "ArrowUp" },
+  { time: 22500, type: "ArrowLeft" },
+  { time: 24000, type: "ArrowDown" },
 ];
+
 
 const Background = () => {
   const texture = useTexture("/images/disco.jpg");
@@ -45,6 +63,7 @@ const ArrowGame = () => {
   const arrowIdCounter = useRef(0);
   const inputLock = useRef(false);
   const spawnedIndices = useRef({ loop: null, set: new Set() });
+  const audioRef = useRef(null); // Reference for the audio element
 
   const [marioAnim, setMarioAnim] = useState({
     jumpLow: false,
@@ -202,6 +221,8 @@ const ArrowGame = () => {
 
   return (
     <div className="arrow-game-wrapper">
+      <audio ref={audioRef} src="/sounds/Beethoven_Virus_-_DDR.mp3" autoPlay loop />
+
       <Scoreboard players={[{ username: "Player", score }]} />
       <div className="arrow-game-container">
         <div className="hit-line" style={{ left: `${TARGET_X}px` }} />

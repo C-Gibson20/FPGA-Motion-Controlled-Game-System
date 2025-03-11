@@ -1,59 +1,68 @@
 import React, { useState, useEffect, useRef } from "react";
+import { useFrame } from "@react-three/fiber";
 import SpikeBall from "./SpikeBall.jsx";
 
+const OFFSCREEN_X = -2.5;
+
 const SpikeBallSpawner = ({
-  startPositions,    // Array of base positions (e.g. [[x, y, z], [x, y, z], ...])
-  playerRef,         // Ref to the player, passed to each SpikeBall for collision detection.
-  onCollision,       // Callback when a spike ball collides with the player.
-  onSafePass,        // Callback when a spike ball safely passes the player.
-  spawnInterval = 2000,  // Base interval (ms) between spawning new spike balls.
-  lifetime = 4000       // How long (ms) each spike ball remains spawned.
+  playerRef,
+  onCollision,
+  onSafePass,
+  spawnInterval = 6000,
 }) => {
   const [spikeBalls, setSpikeBalls] = useState([]);
-  const spawnIndex = useRef(0);
-  const timeoutRef = useRef(null);
+  const intervalRef = useRef(null);
 
   useEffect(() => {
-    if (!startPositions || startPositions.length === 0) return;
-    
-    let isMounted = true;
-    
     const spawnSpikeBall = () => {
-      // Use the spawn positions directly from startPositions.
-      const position = startPositions[spawnIndex.current];
-      spawnIndex.current = (spawnIndex.current + 1) % startPositions.length;
-
       const id = Date.now() + Math.random();
-      setSpikeBalls((prev) => [...prev, { id, position }]);
+      const position = [1.5, -0.25, 0];
+      const speed = 1.0 + Math.random() * 0.5;
 
-      // Remove this spike ball after its lifetime.
-      setTimeout(() => {
-        setSpikeBalls((prev) => prev.filter((s) => s.id !== id));
-      }, lifetime);
+      setSpikeBalls((prev) => [...prev, { id, position, speed, hasScored: false }]);
     };
 
-    const spawnLoop = () => {
-      if (!isMounted) return;
-      
-      spawnSpikeBall();
-      // Randomize the next spawn interval between 75% and 125% of spawnInterval.
-      const nextInterval = spawnInterval * (0.75 + Math.random() * 0.4);
-      timeoutRef.current = setTimeout(spawnLoop, nextInterval);
-    };
-
-    spawnLoop();
+    intervalRef.current = setInterval(spawnSpikeBall, spawnInterval);
 
     return () => {
-      isMounted = false;
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      clearInterval(intervalRef.current);
     };
-  }, [startPositions, spawnInterval, lifetime]);
+  }, [spawnInterval]);
+
+  useFrame((_, delta) => {
+    const playerPos = playerRef?.current?.position || { x: 0, y: 0.35, z: 0 };
+
+    setSpikeBalls((prev) =>
+      prev
+        .map((ball) => {
+          const [x, y, z] = ball.position;
+          const newX = x - ball.speed * delta;
+
+          const spikePos = { x: newX + 0.1, y: y + 0.25 };
+          const dist = Math.sqrt(
+            (playerPos.x - spikePos.x) ** 2 + (playerPos.y + 0.35 - spikePos.y) ** 2
+          );
+
+          if (dist < 0.3 && !ball.hasScored) {
+            onCollision?.();
+            return { ...ball, position: [newX, y, z], hasScored: true };
+          } else if (spikePos.x < playerPos.x - 1 && !ball.hasScored) {
+            onSafePass?.();
+            return { ...ball, position: [newX, y, z], hasScored: true };
+          }
+
+          return { ...ball, position: [newX, y, z] };
+        })
+        .filter((ball) => ball.position[0] > OFFSCREEN_X)
+    );
+  });
 
   return (
     <>
-      {spikeBalls.map(({ id, position }) => (
+      {spikeBalls.map(({ id, position, speed }) => (
         <SpikeBall
           key={id}
+          speed={speed}
           position={position}
           playerRef={playerRef}
           onCollision={onCollision}
