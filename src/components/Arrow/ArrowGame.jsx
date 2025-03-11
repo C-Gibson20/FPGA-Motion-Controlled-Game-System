@@ -5,7 +5,8 @@ import PlayerMario from "../Player/PlayerMario.jsx";
 import { Canvas } from "@react-three/fiber";
 import "./Arrow.css";
 
-const ARROW_KEYS = ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"];
+// Includes space key for "Button"
+const INPUT_KEYS = ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", " "];
 const TARGET_X = 80;
 const HIT_WINDOW = 20;
 const ARROW_SPEED = 100;
@@ -34,12 +35,13 @@ const ArrowGame = () => {
     ArrowDown: 0,
     ArrowLeft: 0,
     ArrowRight: 0,
+    " ": 0, // Space bar ("Button") shares same lane for now
   };
 
   useEffect(() => {
     const DISTANCE_PER_ARROW = (SPAWN_INTERVAL / 1000) * ARROW_SPEED;
     arrowsRef.current = Array.from({ length: INITIAL_ARROW_COUNT }).map((_, i) => {
-      const key = ARROW_KEYS[Math.floor(Math.random() * ARROW_KEYS.length)];
+      const key = INPUT_KEYS[Math.floor(Math.random() * INPUT_KEYS.length)];
       return {
         id: arrowIdCounter.current++,
         type: key,
@@ -72,7 +74,7 @@ const ArrowGame = () => {
         .filter((arrow) => arrow.position.x > -100);
 
       while (now - lastSpawnTime.current >= SPAWN_INTERVAL) {
-        const key = ARROW_KEYS[Math.floor(Math.random() * ARROW_KEYS.length)];
+        const key = INPUT_KEYS[Math.floor(Math.random() * INPUT_KEYS.length)];
         arrowsRef.current.push({
           id: arrowIdCounter.current++,
           type: key,
@@ -90,7 +92,7 @@ const ArrowGame = () => {
     };
 
     const animationId = requestAnimationFrame(animate);
-    return () => cancelAnimationFrame(animationId);
+    return () => cancelAnimationId(animationId);
   }, []);
 
   const showFeedback = (text, color) => {
@@ -121,6 +123,7 @@ const ArrowGame = () => {
       await sleep(400);
       setMarioAnim({ jumpLow: false, left: false, right: false, still: true });
     } else {
+      // No animation (e.g. for Button / Space bar)
       setMarioAnim({ jumpLow: false, left: false, right: false, still: true });
     }
 
@@ -129,11 +132,12 @@ const ArrowGame = () => {
 
   useEffect(() => {
     const handleKeyDown = async (e) => {
+      const key = e.key === " " ? " " : e.key;
       if (inputLock.current) return;
 
       const matchIndex = arrowsRef.current.findIndex(
         (arrow) =>
-          arrow.type === e.key &&
+          arrow.type === key &&
           !arrow.missed &&
           Math.abs(arrow.position.x - TARGET_X) < HIT_WINDOW
       );
@@ -167,7 +171,7 @@ const ArrowGame = () => {
       <div className="arrow-game-container">
         <div className="hit-line" style={{ left: `${TARGET_X}px` }} />
         {arrows.map((arrow) => (
-          <Arrow key={arrow.id} type={arrow.type} position={arrow.position} />
+          <Arrow key={arrow.id} type={arrow.type === " " ? "Button" : arrow.type} position={arrow.position} />
         ))}
       </div>
 
@@ -188,9 +192,7 @@ const ArrowGame = () => {
         }}
         camera={{ position: [0, 0, 10], fov: 10 }}
       >
-        <ambientLight 
-            intensity={4} 
-        />
+        <ambientLight intensity={4} />
         <PlayerMario
           username="Player"
           initialPosition={[0, -0.7, 0]}
