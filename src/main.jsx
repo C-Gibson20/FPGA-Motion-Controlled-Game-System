@@ -11,7 +11,7 @@ import CoinGame from "./components/Coin/CoinGame.jsx";
 import "./pages/Menu/Menu.css";
 import "./pages/RythmGame/RhythmGame.css";
 import "./pages/ModifierPage/ModifierPage.css";
-import Arrow from "./components/Arrow/arrow.jsx";
+import Arrow from "./components/Arrow/Arrow.jsx";
 import ArrowGame from "./components/Arrow/ArrowGame.jsx";
 
 const Games = {
@@ -33,6 +33,7 @@ function Root() {
 
   return (
     <StrictMode>
+      <ArrowGame/>
       {<div className="container">
         {!gameStarted && !modifierPage && !showPopup ? (
           <Menu

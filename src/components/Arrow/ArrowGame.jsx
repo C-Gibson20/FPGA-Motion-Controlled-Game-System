@@ -2,8 +2,10 @@ import React, { useEffect, useState, useRef } from "react";
 import Arrow from "./Arrow.jsx";
 import Scoreboard from "../../pages/RythmGame/Scoreboard.jsx";
 import PlayerMario from "../Player/PlayerMario.jsx";
-import { Canvas } from "@react-three/fiber";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import "./Arrow.css";
+import { useGLTF, useTexture, useAnimations } from "@react-three/drei";
+import * as THREE from "three";
 
 // Constants
 const INPUT_KEYS = ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", " "];
@@ -20,6 +22,21 @@ const BEATMAP = [
   { time: 4000, type: "ArrowDown" },
 ];
 const LOOP_DURATION = 10000;
+
+const Background = () => {
+  const texture = useTexture("/images/disco.jpg");
+
+  // Ensure correct color encoding
+  texture.encoding = THREE.sRGBEncoding;
+  texture.colorSpace = THREE.SRGBColorSpace;
+
+  const { scene } = useThree();
+  useEffect(() => {
+    scene.background = texture;
+  }, [scene, texture]);
+
+  return null;
+};
 
 const ArrowGame = () => {
   const [score, setScore] = useState(0);
@@ -203,6 +220,7 @@ const ArrowGame = () => {
         }}
         camera={{ position: [0, 0, 10], fov: 10 }}
       >
+        <Background/>
         <ambientLight intensity={4} />
         <PlayerMario
           username="Player"
