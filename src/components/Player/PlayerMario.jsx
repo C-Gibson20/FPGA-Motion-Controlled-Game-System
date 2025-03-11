@@ -14,6 +14,8 @@ const PlayerMario = ({ username, isPlayerPlayer, initialPosition, playerRef, jum
   const [currentModel, setCurrentModel] = useState("MarioIdle");
   const groupRef = useRef();
   const activeAction = useRef(null);
+  // Ref to ensure we trigger jump only once.
+  const jumpTriggeredRef = useRef(false);
 
   // Forward group ref for external access.
   useEffect(() => {
@@ -38,9 +40,9 @@ const PlayerMario = ({ username, isPlayerPlayer, initialPosition, playerRef, jum
   const { actions: rightSideStepActions } = useAnimations(rightSideStepAnimations, groupRef);
 
   const velocityY = useRef(0);
-  const speed = 0.02;
+  const speed = 0.005;
   const jumpStrength = 0.07;
-  const gravity = 0.004;
+  const gravity = 0.9; // adjust as needed
   const isJumping = useRef(false);
   const keys = useRef({
     ArrowUp: false,
@@ -50,7 +52,7 @@ const PlayerMario = ({ username, isPlayerPlayer, initialPosition, playerRef, jum
     Space: false,
   });
 
-  // Set up keyboard controls for local player.
+  // Keyboard controls for local player.
   useEffect(() => {
     if (!isPlayerPlayer) return;
 
@@ -79,13 +81,18 @@ const PlayerMario = ({ username, isPlayerPlayer, initialPosition, playerRef, jum
     if (!groupRef.current) return;
     let didMove = false;
 
-    // Apply FPGA (WS) controls first.
+    // --- FPGA Controls ---
     if (jumpLow) {
-      if (!isJumping.current) {
+      // Only trigger jump once when jumpLow becomes true.
+      if (!jumpTriggeredRef.current && !isJumping.current) {
+        jumpTriggeredRef.current = true;
         isJumping.current = true;
         velocityY.current = jumpStrength;
         setCurrentModel("MarioJump");
       }
+    } else {
+      // Reset our trigger when jumpLow is false.
+      jumpTriggeredRef.current = false;
     }
     if (left) {
       groupRef.current.position.x -= speed;
@@ -101,7 +108,7 @@ const PlayerMario = ({ username, isPlayerPlayer, initialPosition, playerRef, jum
       setCurrentModel("MarioIdle");
     }
 
-    // Then apply keyboard controls (if local).
+    // --- Keyboard Controls (for local player) ---
     if (isPlayerPlayer) {
       if (keys.current.ArrowLeft) {
         groupRef.current.position.x -= speed;
@@ -115,10 +122,7 @@ const PlayerMario = ({ username, isPlayerPlayer, initialPosition, playerRef, jum
       }
     }
 
-    // const MOVE_CNST = 0.2;
-    // let moveAmount = delta * MOVE_CNST;
-
-    // Update jumping motion.
+    // --- Jumping Motion ---
     if (isJumping.current) {
       groupRef.current.position.y += velocityY.current;
       velocityY.current -= 0.3 * delta * gravity;
@@ -139,16 +143,22 @@ const PlayerMario = ({ username, isPlayerPlayer, initialPosition, playerRef, jum
     let action;
     if (currentModel === "MarioIdle") {
       action = idleActions["mixamo.com"] || Object.values(idleActions)[0];
+      if (action) action.setLoop(THREE.LoopRepeat, Infinity);
     } else if (currentModel === "MarioJump") {
       action = jumpActions["mixamo.com"] || Object.values(jumpActions)[0];
+      if (action) {
+        action.setLoop(THREE.LoopOnce, 1);
+        action.clampWhenFinished = true;
+      }
     } else if (currentModel === "MarioSideStep") {
       action = sideStepActions["mixamo.com"] || Object.values(sideStepActions)[0];
+      if (action) action.setLoop(THREE.LoopRepeat, Infinity);
     } else if (currentModel === "MarioRightSideStep") {
       action = rightSideStepActions["mixamo.com"] || Object.values(rightSideStepActions)[0];
+      if (action) action.setLoop(THREE.LoopRepeat, Infinity);
     }
     if (action) {
       action.reset().fadeIn(0.2).play();
-      action.setLoop(THREE.LoopRepeat, Infinity);
       activeAction.current = action;
     }
   }, [currentModel, idleActions, jumpActions, sideStepActions, rightSideStepActions]);

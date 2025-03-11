@@ -9,6 +9,7 @@ import * as THREE from "three";
 // import SpikeBall from "./SpikeBall";
 import PlayerMario from "../../components/Player/PlayerMario.jsx";
 import PlayerWaluigi from "../../components/Player/PlayerWaluigi.jsx";
+import Scoreboard from "../../pages/RythmGame/Scoreboard.jsx";
 
 const Background = () => {
   const texture = useTexture("/images/Castel.jpg");
@@ -21,23 +22,6 @@ const Background = () => {
   }, [scene, texture]);
 
   return null;
-};
-
-const Scoreboard = ({ players }) => {
-  return (
-    <div className="scoreboard">
-      <ul>
-        {players.map((p, index) => (
-          <li key={`${p.username}-${index}`} className="leaderboard-entry">
-            <img src={p.avatar || "/images/default-avatar.png"} alt={p.username} className="player-avatar" />
-            <div className="score-box">
-              <span className="player-score">{p.score}</span>
-            </div>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
 };
 
 const FETCH_INTERVAL = 1000;
@@ -63,9 +47,11 @@ const Scene = ({ fpgaControls, players, scores, startPositions, onCoinCollect, l
       ...player,
       position: [xPos, -0.7, 0],
       score: scores[index] || 0,
-      avatar: player.avatar || "/images/default-avatar.png",
+      // Force the avatar regardless of what's passed in:
+      avatar: index === 0 ? "/images/mario-icon.png" : "/images/waluigi-icon.png",
     };
   });
+  
 
   return (
     <div style={{ width: "100vw", height: "100vh", overflow: "hidden", position: "relative" }}>
