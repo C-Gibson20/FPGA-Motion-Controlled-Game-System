@@ -1,18 +1,33 @@
 import React, { useEffect, useState, useRef } from "react";
 import Arrow from "./Arrow.jsx";
 import Scoreboard from "../../pages/RythmGame/Scoreboard.jsx";
+import PlayerMario from "../Player/PlayerMario.jsx";
+import { Canvas } from "@react-three/fiber";
 import "./Arrow.css";
 
 const ARROW_KEYS = ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"];
 const TARGET_X = 80;
 const HIT_WINDOW = 20;
+const ARROW_SPEED = 100;
+const SPAWN_INTERVAL = 1000;
+const INITIAL_ARROW_COUNT = 6;
 
 const ArrowGame = () => {
-  const [arrows, setArrows] = useState([]);
   const [score, setScore] = useState(0);
   const [feedback, setFeedback] = useState(null);
+  const [arrows, setArrows] = useState([]);
+  const arrowsRef = useRef([]);
+  const lastSpawnTime = useRef(performance.now());
   const feedbackTimeout = useRef(null);
-  const containerRef = useRef();
+  const arrowIdCounter = useRef(0);
+  const inputLock = useRef(false);
+
+  const [marioAnim, setMarioAnim] = useState({
+    jumpLow: false,
+    left: false,
+    right: false,
+    still: true,
+  });
 
   const arrowLanes = {
     ArrowUp: 0,
@@ -22,107 +37,60 @@ const ArrowGame = () => {
   };
 
   useEffect(() => {
-    const ARROW_SPEED = 5;        // pixels per tick
-    const TICK_INTERVAL = 50;     // ms
-    const SPAWN_INTERVAL = 1000;  // ms
-    const DISTANCE_PER_SECOND = (SPAWN_INTERVAL / TICK_INTERVAL) * ARROW_SPEED; // 100px
-
-    // Preload arrows with correct spacing
-    const initialArrows = Array.from({ length: 10 }).map((_, i) => {
-      const randomKey = ARROW_KEYS[Math.floor(Math.random() * ARROW_KEYS.length)];
+    const DISTANCE_PER_ARROW = (SPAWN_INTERVAL / 1000) * ARROW_SPEED;
+    arrowsRef.current = Array.from({ length: INITIAL_ARROW_COUNT }).map((_, i) => {
+      const key = ARROW_KEYS[Math.floor(Math.random() * ARROW_KEYS.length)];
       return {
-        id: Date.now() + i,
-        type: randomKey,
+        id: arrowIdCounter.current++,
+        type: key,
         position: {
-          x: window.innerWidth - i * DISTANCE_PER_SECOND,
-          y: arrowLanes[randomKey],
+          x: window.innerWidth - i * DISTANCE_PER_ARROW,
+          y: arrowLanes[key],
         },
         missed: false,
       };
     });
+    setArrows([...arrowsRef.current]);
+  }, []);
 
-    setArrows(initialArrows);
+  useEffect(() => {
+    let lastTime = performance.now();
 
-    // Regular arrow spawn interval
-    const spawnInterval = setInterval(() => {
-      const randomKey = ARROW_KEYS[Math.floor(Math.random() * ARROW_KEYS.length)];
-      setArrows((prev) => [
-        ...prev,
-        {
-          id: Date.now(),
-          type: randomKey,
+    const animate = (now) => {
+      const delta = (now - lastTime) / 1000;
+      lastTime = now;
+
+      arrowsRef.current = arrowsRef.current
+        .map((arrow) => {
+          const newX = arrow.position.x - ARROW_SPEED * delta;
+          if (!arrow.missed && newX < TARGET_X - HIT_WINDOW) {
+            showFeedback("Miss", "red");
+            return { ...arrow, missed: true, position: { ...arrow.position, x: newX } };
+          }
+          return { ...arrow, position: { ...arrow.position, x: newX } };
+        })
+        .filter((arrow) => arrow.position.x > -100);
+
+      while (now - lastSpawnTime.current >= SPAWN_INTERVAL) {
+        const key = ARROW_KEYS[Math.floor(Math.random() * ARROW_KEYS.length)];
+        arrowsRef.current.push({
+          id: arrowIdCounter.current++,
+          type: key,
           position: {
             x: window.innerWidth,
-            y: arrowLanes[randomKey],
+            y: arrowLanes[key],
           },
           missed: false,
-        },
-      ]);
-    }, SPAWN_INTERVAL);
-
-    return () => clearInterval(spawnInterval);
-  }, []);
-
-  // Move arrows and detect misses
-  useEffect(() => {
-    const moveInterval = setInterval(() => {
-      setArrows((prev) =>
-        prev
-          .map((arrow) => {
-            const newX = arrow.position.x - 5;
-            if (!arrow.missed && newX < TARGET_X - HIT_WINDOW) {
-              showFeedback("Miss", "red");
-              return {
-                ...arrow,
-                missed: true,
-                position: { ...arrow.position, x: newX },
-              };
-            }
-            return {
-              ...arrow,
-              position: { ...arrow.position, x: newX },
-            };
-          })
-          .filter((arrow) => arrow.position.x > -100)
-      );
-    }, 50);
-
-    return () => clearInterval(moveInterval);
-  }, []);
-
-  // Handle key input for arrow hits
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      const matchIndex = arrows.findIndex(
-        (arrow) =>
-          arrow.type === e.key &&
-          !arrow.missed &&
-          Math.abs(arrow.position.x - TARGET_X) < HIT_WINDOW
-      );
-
-      if (matchIndex !== -1) {
-        const arrowX = arrows[matchIndex].position.x;
-        const distance = Math.abs(arrowX - TARGET_X);
-
-        if (distance < 10) {
-          setScore((prev) => prev + 2);
-          showFeedback("Perfect!", "lime");
-        } else {
-          setScore((prev) => prev + 1);
-          showFeedback("Good!", "yellow");
-        }
-
-        setArrows((prev) => prev.filter((_, i) => i !== matchIndex));
+        });
+        lastSpawnTime.current += SPAWN_INTERVAL;
       }
+
+      setArrows([...arrowsRef.current]);
+      requestAnimationFrame(animate);
     };
 
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [arrows]);
-
-  // Ensure window focus for key input
-  useEffect(() => {
-    window.focus();
+    const animationId = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(animationId);
   }, []);
 
   const showFeedback = (text, color) => {
@@ -131,10 +99,72 @@ const ArrowGame = () => {
     feedbackTimeout.current = setTimeout(() => setFeedback(null), 600);
   };
 
+  const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+  const triggerMarioAnimation = async (type) => {
+    inputLock.current = true;
+
+    if (type === "ArrowLeft") {
+      setMarioAnim({ jumpLow: false, left: true, right: false, still: false });
+      await sleep(300);
+      setMarioAnim({ jumpLow: false, left: false, right: true, still: false });
+      await sleep(300);
+      setMarioAnim({ jumpLow: false, left: false, right: false, still: true });
+    } else if (type === "ArrowRight") {
+      setMarioAnim({ jumpLow: false, left: false, right: true, still: false });
+      await sleep(300);
+      setMarioAnim({ jumpLow: false, left: true, right: false, still: false });
+      await sleep(300);
+      setMarioAnim({ jumpLow: false, left: false, right: false, still: true });
+    } else if (type === "ArrowUp") {
+      setMarioAnim({ jumpLow: true, left: false, right: false, still: false });
+      await sleep(400);
+      setMarioAnim({ jumpLow: false, left: false, right: false, still: true });
+    } else {
+      setMarioAnim({ jumpLow: false, left: false, right: false, still: true });
+    }
+
+    inputLock.current = false;
+  };
+
+  useEffect(() => {
+    const handleKeyDown = async (e) => {
+      if (inputLock.current) return;
+
+      const matchIndex = arrowsRef.current.findIndex(
+        (arrow) =>
+          arrow.type === e.key &&
+          !arrow.missed &&
+          Math.abs(arrow.position.x - TARGET_X) < HIT_WINDOW
+      );
+
+      if (matchIndex !== -1) {
+        const arrow = arrowsRef.current[matchIndex];
+        const distance = Math.abs(arrow.position.x - TARGET_X);
+
+        if (distance < 10) {
+          setScore((s) => s + 2);
+          showFeedback("Perfect!", "lime");
+        } else {
+          setScore((s) => s + 1);
+          showFeedback("Good!", "yellow");
+        }
+
+        arrowsRef.current.splice(matchIndex, 1);
+        setArrows([...arrowsRef.current]);
+
+        await triggerMarioAnimation(arrow.type);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
   return (
     <div className="arrow-game-wrapper">
       <Scoreboard players={[{ username: "Player", score }]} />
-      <div ref={containerRef} className="arrow-game-container">
+      <div className="arrow-game-container">
         <div className="hit-line" style={{ left: `${TARGET_X}px` }} />
         {arrows.map((arrow) => (
           <Arrow key={arrow.id} type={arrow.type} position={arrow.position} />
@@ -146,6 +176,32 @@ const ArrowGame = () => {
           {feedback.text}
         </div>
       )}
+
+      <Canvas
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          width: "100vw",
+          height: "100vh",
+          zIndex: 0,
+        }}
+        camera={{ position: [0, 0, 10], fov: 10 }}
+      >
+        <ambientLight 
+            intensity={4} 
+        />
+        <PlayerMario
+          username="Player"
+          initialPosition={[0, -0.7, 0]}
+          isPlayerPlayer={false}
+          playerRef={null}
+          jumpLow={marioAnim.jumpLow}
+          left={marioAnim.left}
+          right={marioAnim.right}
+          still={marioAnim.still}
+        />
+      </Canvas>
     </div>
   );
 };
