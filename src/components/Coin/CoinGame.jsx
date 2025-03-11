@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Canvas, useThree } from "@react-three/fiber";
 import { useTexture } from "@react-three/drei";
-import * as THREE from "three";
+import Server from "../../server";
+import "./CoinGame.css"; // We reuse the same CSS as Scene
 import Scoreboard from "../../pages/RythmGame/Scoreboard.jsx";
 import PlayerMario from "../../components/Player/PlayerMario.jsx";
 import PlayerWaluigi from "../../components/Player/PlayerWaluigi.jsx";
-import CoinSpawner from "./CoinSpawner.jsx";
-import "./CoinGame.css";
+import CoinSpawner from "../../components/Coin/CoinSpawner.jsx";
+import * as THREE from "three";
 
 const Background = () => {
   const texture = useTexture("/images/Castel.jpg");
@@ -29,22 +30,31 @@ const CoinLayerGroup = ({ children, layer = 0 }) => {
   return <group ref={groupRef}>{children}</group>;
 };
 
+const FETCH_INTERVAL = 1000;
+
 const CoinGame = ({
+  fpgaControls = {},
   players = ["Mario", "Waluigi"],
-  fpgaControls,
-  ws,
+  scores, // scores may be undefined
+  startPositions,
   localPlayerName = "Mario"
 }) => {
-  const numPlayers = players.length;
+  // Ensure players is an array of objects.
+  const processedPlayers = players.map((p) =>
+    typeof p === "string" ? { username: p } : p
+  );
+  const numPlayers = processedPlayers.length;
   if (numPlayers === 0) return <div>No players</div>;
 
-  // Initialize scores and lives arrays (one per player)
-  const [scores, setScores] = useState(Array(numPlayers).fill(0));
+  // Use safeScores: if scores is not provided or empty, default to an array of 0s.
+  const safeScores = (scores && scores.length) ? scores : Array(numPlayers).fill(0);
+
+  // Local score state for coin collection (for the local player)
+  const [localScore, setLocalScore] = useState(0);
+  
+  // Lives state (one per player)
   const [lives, setLives] = useState(Array(numPlayers).fill(2));
   const [gameOver, setGameOver] = useState(false);
-
-  // Local score state for coin collection for the local player
-  const [localScore, setLocalScore] = useState(0);
 
   // Create an array of refs for each player.
   const controlledPlayerRefs = useRef([]);
@@ -54,56 +64,41 @@ const CoinGame = ({
       .map((_, i) => controlledPlayerRefs.current[i] || React.createRef());
   }, [numPlayers]);
 
-  // Collision handling: update lives for the given player index.
-  const handleCoinCollision = (playerIndex) => {
-    setLives(prev => {
-      const updated = [...prev];
-      updated[playerIndex] = Math.max(updated[playerIndex] - 1, 0);
-      console.log(`💥 Collision for player ${playerIndex}: Lives: ${updated[playerIndex]}`);
-      if (updated[playerIndex] === 0) {
-        setGameOver(true);
-      }
-      return updated;
-    });
+  // Update local score when a coin is collected.
+  const handleCoinCollect = () => {
+    setLocalScore(prev => prev + 1);
+    console.log("Coin collected!");
   };
 
-  // Increase score when a coin is collected for the given player index.
-  const handleCoinCollect = (playerIndex) => {
-    // If it's the local player, update localScore.
-    if (players[playerIndex] === localPlayerName) {
-      setLocalScore(prev => prev + 1);
-    }
-    setScores(prev => {
-      const updated = [...prev];
-      updated[playerIndex] = updated[playerIndex] + 1;
-      console.log(`✅ Coin collected for player ${playerIndex}: Score: ${updated[playerIndex]}`);
-      return updated;
-    });
-  };
-
-  // Build an array of player objects.
-  const updatedPlayers = players.map((player, index) => {
-    // If player is a string, wrap it in an object.
-    const username = typeof player === "string" ? player : player.username;
+  // Calculate positions for players so that they are evenly spread.
+  const updatedPlayers = processedPlayers.map((player, index) => {
+    const totalPlayers = processedPlayers.length;
+    const spacing = 10 / Math.max(1, totalPlayers);
+    let xPos = -3 + index * spacing;
+    xPos = xPos * 0.3;
     return {
-      username,
-      position: [(-3 + index * (10 / Math.max(1, numPlayers))) * 0.3, -0.7, 0],
-      score: username === localPlayerName ? localScore : (scores[index] || 0),
+      ...player,
+      position: [xPos, -0.7, 0],
+      score: player.username === localPlayerName ? localScore : (safeScores[index] || 0),
       avatar: index === 0 ? "/images/mario.png" : "/images/waluigi.png",
     };
   });
 
   return (
-    <div style={{ width: "100vw", height: "100vh", position: "relative" }}>
+    <div style={{ width: "100vw", height: "100vh", overflow: "hidden", position: "relative" }}>
       <Scoreboard players={updatedPlayers} lives={lives} />
 
       {gameOver && (
         <div className="game-over-overlay">
           <h1 className="title">
-            <span className="word"><span>G</span><span>A</span><span>M</span><span>E</span></span>
-            <span className="word"><span>O</span><span>V</span><span>E</span><span>R</span></span>
+            <span className="word">
+              <span>G</span><span>A</span><span>M</span><span>E</span>
+            </span>
+            <span className="word">
+              <span>O</span><span>V</span><span>E</span><span>R</span>
+            </span>
           </h1>
-          <div className="game-over-score">Scores: {scores.join(" - ")}</div>
+          <div className="game-over-score">Scores: {updatedPlayers.map(p => p.score).join(" - ")}</div>
         </div>
       )}
 
@@ -122,7 +117,6 @@ const CoinGame = ({
         <directionalLight position={[10, 10, 5]} castShadow />
 
         {updatedPlayers.map((player, index) => {
-          // Determine if this player is local.
           const isLocal = player.username === localPlayerName;
           if (index === 0) {
             return (
@@ -136,7 +130,6 @@ const CoinGame = ({
                 right={fpgaControls?.[1]?.right || false}
                 still={fpgaControls?.[1]?.still || false}
                 playerRef={isLocal ? controlledPlayerRefs.current[index] : undefined}
-                ws={ws}
               />
             );
           } else if (index === 1) {
@@ -151,7 +144,6 @@ const CoinGame = ({
                 right={fpgaControls?.[2]?.right || false}
                 still={fpgaControls?.[2]?.still || false}
                 playerRef={isLocal ? controlledPlayerRefs.current[index] : undefined}
-                ws={ws}
               />
             );
           } else {
@@ -161,10 +153,9 @@ const CoinGame = ({
 
         <CoinLayerGroup layer={2}>
           <CoinSpawner
-            startPositions={[[0, 0, 0], [1, 0, 0]]}
+            startPositions={startPositions || updatedPlayers.map(p => p.position)}
             playerRef={controlledPlayerRefs.current[0] || undefined}
             onCoinCollect={(playerIndex) => handleCoinCollect(playerIndex)}
-            onCollision={(playerIndex) => handleCoinCollision(playerIndex)}
           />
         </CoinLayerGroup>
       </Canvas>

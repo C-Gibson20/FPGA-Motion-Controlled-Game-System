@@ -67,6 +67,7 @@ const RhythmGame = ({ gameSel, players = [], modifier, ws, onExit }) => {
               const controls = { jump: false, left: false, right: false, still: false };
               switch (payload.data) {
                 case 'J':
+                  console.log("JUMMMPP", event.data);
                   controls.jump = true;
                   break;
                 case 'L':
