@@ -86,7 +86,7 @@ const SpikeBallGame = ({
                 //left={fpgaControls?.[1]?.left || false}
                 //right={fpgaControls?.[1]?.right || false}
                 still={fpgaControls?.[1]?.still || false}
-                playerRef={isLocal ? controlledPlayerRefs.current[index] : undefined}
+                playerRef={controlledPlayerRefs.current[index]}
                 ws={ws}
               />
             );
@@ -101,7 +101,7 @@ const SpikeBallGame = ({
                 //left={fpgaControls?.[2]?.left || false}
                 //right={fpgaControls?.[2]?.right || false}
                 still={fpgaControls?.[2]?.still || false}
-                playerRef={isLocal ? controlledPlayerRefs.current[index] : undefined}
+                playerRef={controlledPlayerRefs.current[index]}
                 ws={ws}
               />
             );

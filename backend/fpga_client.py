@@ -4,7 +4,7 @@ import random
 
 # AWS Server Details
 AWS_IP = "13.61.26.147"
-AWS_PORT = 12000
+AWS_PORT = 15234
 
 def send_to_server(client_socket, msg):
     try:

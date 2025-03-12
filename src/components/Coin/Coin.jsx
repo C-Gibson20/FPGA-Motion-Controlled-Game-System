@@ -4,7 +4,7 @@ import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 
 const Coin = ({ position, onCollect }) => {
-  const { scene } = useGLTF("models/coin.glb");
+  const { scene } = useGLTF("/models/coin.glb");
   const coinGroupRef = useRef();
   const [clone, setClone] = useState(null);
 
