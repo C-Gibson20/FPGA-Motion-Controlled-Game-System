@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from "react";
 import Arrow from "./Arrow.jsx";
 import Scoreboard from "../../pages/RythmGame/Scoreboard.jsx";
 import PlayerMario from "../Player/PlayerMario.jsx";
-import { Canvas, useThree } from "@react-three/fiber";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import "./Arrow.css";
 import { useGLTF, useTexture, useAnimations } from "@react-three/drei";
 import * as THREE from "three";
@@ -10,39 +10,23 @@ import * as THREE from "three";
 // Constants
 const INPUT_KEYS = ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", " "];
 const TARGET_X = 80;
-const HIT_WINDOW = 40;
-const ARROW_SPEED = 5; // visual speed
-const LOOP_DURATION = 5500;
+const HIT_WINDOW = 20;
+const ARROW_SPEED = 5;
 
+// Beatmap and Loop Timing
 const BEATMAP = [
-  // Intro (0 - 6000ms)
-  { time: 0, type: "ArrowUp" },
-  { time: 1500, type: "ArrowLeft" },
-  { time: 3000, type: "ArrowDown" },
-  { time: 4500, type: "ArrowRight" },
-  { time: 6000, type: " " },
-
-  // Main Section (6000 - 18000ms)
-  { time: 7500, type: "ArrowUp" },
-  { time: 9000, type: "ArrowLeft" },
-  { time: 10500, type: "ArrowDown" },
-  { time: 12000, type: "ArrowRight" },
-  { time: 13500, type: "ArrowUp" },
-  { time: 15000, type: "ArrowLeft" },
-  { time: 16500, type: "ArrowDown" },
-  { time: 18000, type: "ArrowRight" },
-  
-  // Outro/Transition (18000 - 24000ms)
-  { time: 19500, type: " " },
-  { time: 21000, type: "ArrowUp" },
-  { time: 22500, type: "ArrowLeft" },
-  { time: 24000, type: "ArrowDown" },
+  { time: 0, type: "ArrowLeft" },
+  { time: 1000, type: "ArrowUp" },
+  { time: 2000, type: "ArrowRight" },
+  { time: 3000, type: " " },
+  { time: 4000, type: "ArrowDown" },
 ];
-
+const LOOP_DURATION = 10000;
 
 const Background = () => {
   const texture = useTexture("/images/disco.jpg");
 
+  // Ensure correct color encoding
   texture.encoding = THREE.sRGBEncoding;
   texture.colorSpace = THREE.SRGBColorSpace;
 
@@ -54,29 +38,17 @@ const Background = () => {
   return null;
 };
 
-const ArrowGame = ({
-  players = ["Mario", "Waluigi"],
-  fpgaControls = {},
-  ws,
-  localPlayerName = "Mario"
-}) => {
+const ArrowGame = () => {
+  const [score, setScore] = useState(0);
   const [feedback, setFeedback] = useState(null);
   const [arrows, setArrows] = useState([]);
   const arrowsRef = useRef([]);
   const feedbackTimeout = useRef(null);
   const arrowIdCounter = useRef(0);
   const inputLock = useRef(false);
-  const spawnedIndices = useRef({ loop: null, set: new Set() });
-  const audioRef = useRef(null); // Reference for the audio element
+  const spawnedIndices = useRef(new Set());
 
   const [marioAnim, setMarioAnim] = useState({
-    jumpLow: false,
-    left: false,
-    right: false,
-    still: true,
-  });
-
-  const [waluigiAnim, setWaluigiAnim] = useState({
     jumpLow: false,
     left: false,
     right: false,
@@ -91,45 +63,28 @@ const ArrowGame = ({
     " ": 0,
   };
 
-  const processedPlayers = players.map(p => (typeof p === "string" ? { username: p } : p));
-  const numPlayers = processedPlayers.length;
-  if (numPlayers === 0) return <div>No players</div>;
-
-  const [scores, setScores] = useState(Array(numPlayers).fill(0));
-
-  const [localAnim, setLocalAnim] = useState(
-      Array(numPlayers).fill({ jumpLow: false, left: false, right: false, still: true })
-    );
-
-  const getCurrentLoopInfo = (elapsed) => {
-    const loopNumber = Math.floor(elapsed / LOOP_DURATION);
-    const loopStart = loopNumber * LOOP_DURATION;
-    return { loopNumber, loopStart };
-  };
-
   useEffect(() => {
     let lastFrameTime = performance.now();
     const gameStart = performance.now();
+    let loopCount = 0;
 
     const animate = (now) => {
       const delta = now - lastFrameTime;
-      const elapsed = now - gameStart;
       lastFrameTime = now;
 
-      const secondsDelta = delta / 1000;
-      const speed = ARROW_SPEED * 60;
+      const elapsed = now - gameStart;
+      const currentLoopStart = loopCount * LOOP_DURATION;
 
-      const { loopNumber, loopStart } = getCurrentLoopInfo(elapsed);
-
-      // Reset spawn tracking when loop changes
-      if (spawnedIndices.current.loop !== loopNumber) {
-        spawnedIndices.current = { loop: loopNumber, set: new Set() };
+      // Check if it's time to start a new loop
+      if (elapsed > (loopCount + 1) * LOOP_DURATION) {
+        loopCount++;
+        spawnedIndices.current.clear();
       }
 
       // Move arrows
       arrowsRef.current = arrowsRef.current
         .map((arrow) => {
-          const newX = arrow.position.x - speed * secondsDelta;
+          const newX = arrow.position.x - ARROW_SPEED * (delta / 16.67); // Normalize to 60fps
           if (!arrow.missed && newX < TARGET_X - HIT_WINDOW) {
             showFeedback("Miss", "red");
             return { ...arrow, missed: true, position: { ...arrow.position, x: newX } };
@@ -138,17 +93,11 @@ const ArrowGame = ({
         })
         .filter((arrow) => arrow.position.x > -100);
 
-      // Spawn arrows for this loop only at correct time
+      // Spawn new arrows for this loop
       BEATMAP.forEach((beat, index) => {
-        const beatTime = loopStart + beat.time;
-        const spawnKey = `${loopNumber}-${index}`;
-        const timeUntilBeat = beatTime - elapsed;
-
-        if (
-          timeUntilBeat <= 0 &&
-          timeUntilBeat > -16.67 &&
-          !spawnedIndices.current.set.has(spawnKey)
-        ) {
+        const beatTime = currentLoopStart + beat.time;
+        const spawnKey = `${loopCount}-${index}`;
+        if (elapsed >= beatTime && !spawnedIndices.current.has(spawnKey)) {
           const key = beat.type;
           arrowsRef.current.push({
             id: arrowIdCounter.current++,
@@ -159,7 +108,7 @@ const ArrowGame = ({
             },
             missed: false,
           });
-          spawnedIndices.current.set.add(spawnKey);
+          spawnedIndices.current.add(spawnKey);
         }
       });
 
@@ -182,50 +131,24 @@ const ArrowGame = ({
   const triggerMarioAnimation = async (type) => {
     inputLock.current = true;
 
-    if (type === "L") {
+    if (type === "ArrowLeft") {
       setMarioAnim({ jumpLow: false, left: true, right: false, still: false });
       await sleep(300);
       setMarioAnim({ jumpLow: false, left: false, right: true, still: false });
       await sleep(300);
       setMarioAnim({ jumpLow: false, left: false, right: false, still: true });
-    } else if (type === "R") {
+    } else if (type === "ArrowRight") {
       setMarioAnim({ jumpLow: false, left: false, right: true, still: false });
       await sleep(300);
       setMarioAnim({ jumpLow: false, left: true, right: false, still: false });
       await sleep(300);
       setMarioAnim({ jumpLow: false, left: false, right: false, still: true });
-    } else if (type === "J") {
+    } else if (type === "ArrowUp") {
       setMarioAnim({ jumpLow: true, left: false, right: false, still: false });
       await sleep(400);
       setMarioAnim({ jumpLow: false, left: false, right: false, still: true });
     } else {
       setMarioAnim({ jumpLow: false, left: false, right: false, still: true });
-    }
-
-    inputLock.current = false;
-  };
-
-  const triggerWaluigiAnimation = async (type) => {
-    inputLock.current = true;
-
-    if (type === "L") {
-      setWaluigiAnim({ jumpLow: false, left: true, right: false, still: false });
-      await sleep(300);
-      setWaluigiAnim({ jumpLow: false, left: false, right: true, still: false });
-      await sleep(300);
-      setWaluigiAnim({ jumpLow: false, left: false, right: false, still: true });
-    } else if (type === "R") {
-      setWaluigiAnim({ jumpLow: false, left: false, right: true, still: false });
-      await sleep(300);
-      setWaluigiAnim({ jumpLow: false, left: true, right: false, still: false });
-      await sleep(300);
-      setWaluigiAnim({ jumpLow: false, left: false, right: false, still: true });
-    } else if (type === "J") {
-      setWaluigiAnim({ jumpLow: true, left: false, right: false, still: false });
-      await sleep(400);
-      setWaluigiAnim({ jumpLow: false, left: false, right: false, still: true });
-    } else {
-      setWaluigiAnim({ jumpLow: false, left: false, right: false, still: true });
     }
 
     inputLock.current = false;
@@ -247,7 +170,7 @@ const ArrowGame = ({
         const arrow = arrowsRef.current[matchIndex];
         const distance = Math.abs(arrow.position.x - TARGET_X);
 
-        if (distance < 100) {
+        if (distance < 10) {
           setScore((s) => s + 2);
           showFeedback("Perfect!", "lime");
         } else {
@@ -266,23 +189,9 @@ const ArrowGame = ({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  const updatedPlayers = processedPlayers.map((player, index) => {
-    const spacing = 10 / Math.max(1, numPlayers);
-    let xPos = -3 + index * spacing;
-    xPos = xPos * 0.3;
-    return {
-      username: player.username,
-      position: [xPos, -0.7, 0],
-      score: player.username === localPlayerName ? scores[index] : scores[index] || 0,
-      avatar: index === 0 ? "/images/mario.png" : "/images/waluigi.png",
-    };
-  });
-
   return (
     <div className="arrow-game-wrapper">
-      <audio ref={audioRef} src="/sounds/Beethoven_Virus_-_DDR.mp3" autoPlay loop />
-
-      <Scoreboard players={updatedPlayers} />
+      <Scoreboard players={[{ username: "Player", score }]} />
       <div className="arrow-game-container">
         <div className="hit-line" style={{ left: `${TARGET_X}px` }} />
         {arrows.map((arrow) => (
@@ -311,49 +220,21 @@ const ArrowGame = ({
         }}
         camera={{ position: [0, 0, 10], fov: 10 }}
       >
-        <Background />
+        <Background/>
         <ambientLight intensity={4} />
-        {updatedPlayers.map((player, index) => {
-          const isLocal = player.username === localPlayerName;
-          if (index === 0) {
-            return (
-              <PlayerMario
-                key={`mario-${index}`}
-                username={player.username}
-                initialPosition={player.position}
-                isPlayerPlayer={isLocal}
-                jumpLow={localAnim[index]?.jumpLow || false}
-                left={localAnim[index]?.left || false}
-                right={localAnim[index]?.right || false}
-                still={localAnim[index]?.still || true}
-                playerRef={isLocal ? controlledPlayerRefs.current[index] : undefined}
-                ws={ws}
-              />
-            );
-          } else if (index === 1) {
-            return (
-              <PlayerWaluigi
-                key={`waluigi-${index}`}
-                username={player.username}
-                initialPosition={player.position}
-                isPlayerPlayer={isLocal}
-                jumpLow={localAnim[index]?.jumpLow || false}
-                left={localAnim[index]?.left || false}
-                right={localAnim[index]?.right || false}
-                still={localAnim[index]?.still || true}
-                playerRef={isLocal ? controlledPlayerRefs.current[index] : undefined}
-                ws={ws}
-              />
-            );
-          } else {
-            return null;
-          }
-        })}
+        <PlayerMario
+          username="Player"
+          initialPosition={[0, -0.7, 0]}
+          isPlayerPlayer={false}
+          playerRef={null}
+          jumpLow={marioAnim.jumpLow}
+          left={marioAnim.left}
+          right={marioAnim.right}
+          still={marioAnim.still}
+        />
       </Canvas>
     </div>
   );
 };
 
 export default ArrowGame;
-
-
