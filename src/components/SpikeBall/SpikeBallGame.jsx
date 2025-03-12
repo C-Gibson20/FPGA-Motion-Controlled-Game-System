@@ -5,34 +5,10 @@ import * as THREE from "three";
 import Scoreboard from "../../pages/RythmGame/Scoreboard.jsx";
 import PlayerMario from "../../components/Player/PlayerMario.jsx";
 import PlayerWaluigi from "../../components/Player/PlayerWaluigi.jsx";
-import SpikeBall from "./SpikeBall.jsx";
 import "./SpikeBallGame.css";
 import SpikeBallSpawner from "./SpikeBallSpawner.jsx";
+import Background from "../../pages/RythmGame/Background.jsx";
 
-// Background component using a castle image.
-const Background = () => {
-  const texture = useTexture("/images/Bowser.jpg");
-  texture.encoding = THREE.sRGBEncoding;
-  texture.colorSpace = THREE.SRGBColorSpace;
-  const { scene } = useThree();
-  useEffect(() => {
-    scene.background = texture;
-  }, [scene, texture]);
-  return null;
-};
-
-// This wrapper forces its children to a specific layer.
-const CoinLayerGroup = ({ children, layer = 0 }) => {
-  const groupRef = useRef();
-  useEffect(() => {
-    if (groupRef.current) {
-      groupRef.current.traverse((child) => {
-        child.layers.set(layer);
-      });
-    }
-  });
-  return <group ref={groupRef}>{children}</group>;
-};
 
 const SpikeBallGame = ({
   players = ["Mario", "Waluigi"],
@@ -49,39 +25,21 @@ const SpikeBallGame = ({
 
   // Initialize scores and lives arrays.
   const [scores, setScores] = useState(Array(numPlayers).fill(0));
-  const [lives, setLives] = useState(Array(numPlayers).fill(10));
-  const [gameOver, setGameOver] = useState(false);
 
   // Create an array of refs for each player.
-  const controlledPlayerRefs = useRef([]);
-  useEffect(() => {
-    controlledPlayerRefs.current = Array(numPlayers)
-      .fill(null)
-      .map((_, i) => controlledPlayerRefs.current[i] || React.createRef());
-  }, [numPlayers]);
+  const controlledPlayerRefs = useRef(players.map(() => React.createRef()));
 
-  // Collision handling: update lives for the given player index.
-  const handleSpikeCollision = (playerIndex) => {
-    setLives(prev => {
-      const updated = [...prev];
-      updated[playerIndex] = Math.max(updated[playerIndex] - 1, 0);
-      console.log(`💥 Collision for player ${playerIndex}: Lives: ${updated[playerIndex]}`);
-      if (updated[playerIndex] === 0) {
-        setGameOver(true);
-      }
-      return updated;
+  
+  // Ensure both players' scores are updated based on collisions.
+  const handleTurn = (playerIndex, collisionStatus) => {
+    setScores((prevScores) => {
+      const updatedScores = [...prevScores];
+      updatedScores[playerIndex] += collisionStatus * 10; // ✅ Fix: Ensure both players get updates
+      return updatedScores;
     });
   };
+  
 
-  // Increase score for a safe pass for the given player index.
-  const handleSpikePass = (playerIndex) => {
-    setScores(prev => {
-      const updated = [...prev];
-      updated[playerIndex] = updated[playerIndex] + 1;
-      console.log(`✅ Safe for player ${playerIndex}: Score: ${updated[playerIndex]}`);
-      return updated;
-    });
-  };
 
   // Build updated players for Scoreboard.
   const updatedPlayers = processedPlayers.map((player, index) => {
@@ -101,22 +59,7 @@ const SpikeBallGame = ({
   return (
     <div style={{ width: "100vw", height: "100vh", position: "relative" }}>
       {/* Render one Scoreboard for both players */}
-      <Scoreboard players={updatedPlayers} lives={lives} />
-
-      {gameOver && (
-        <div className="game-over-overlay">
-          <h1 className="title">
-            <span className="word">
-              <span>G</span><span>A</span><span>M</span><span>E</span>
-            </span>
-            <span className="word">
-              <span>O</span><span>V</span><span>E</span><span>R</span>
-            </span>
-          </h1>
-          <div className="game-over-score">Scores: {updatedPlayers.map(p => p.score).join(" - ")}</div>
-        </div>
-      )}
-
+      <Scoreboard playerNames={players} scores={scores} />
       <Canvas
         shadows
         camera={{ position: [0, 0, 10], fov: 10 }}
@@ -127,7 +70,7 @@ const SpikeBallGame = ({
         }}
         style={{ display: "block" }}
       >
-        <Background />
+        <Background  imagePath="/images/Bowser.jpg"/>
         <directionalLight castShadow intensity={1} position={[5, 5, 5]} />
 
         {updatedPlayers.map((player, index) => {
@@ -166,13 +109,11 @@ const SpikeBallGame = ({
             return null;
           }
         })}
-
-        {/* Here we render SpikeBall. It should call onCollision and onSafePass with a player index. */}
         <SpikeBallSpawner
-          playerRef={controlledPlayerRefs.current[0]} // or [1] for second player
-          onCollision={() => handleSpikeCollision(0)} // player index
-          onSafePass={() => handleSpikePass(0)}
-          spawnInterval={6000}
+          playerRefs={controlledPlayerRefs.current}
+          onTurn={handleTurn} 
+          spawnInterval={2000}
+
           lifetime={4000}
         />
       </Canvas>

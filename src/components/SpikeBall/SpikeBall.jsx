@@ -7,18 +7,12 @@ const MAX_PARTICLES = 100;
 const PARTICLE_LIFETIME = 1.5;
 
 const SpikeBall = ({
-  position = [1.5, -0.25, 0],
-  speed,
-  playerRef,
-  onCollision = () => {},
-  onSafePass = () => {},
+  position = [1.5, -0.25, 0]
 }) => {
   const { scene } = useGLTF("models/BanzaiBIll.glb");
   const groupRef = useRef();
   const [clone, setClone] = useState(null);
-  const [particles, setParticles] = useState([]);
 
-  // Clone GLTF once
   useEffect(() => {
     if (scene) {
       const clonedScene = scene.clone(true);
@@ -39,7 +33,6 @@ const SpikeBall = ({
 
   return (
     <group ref={groupRef} position={position}>
-      {/* Glow Light */}
       <pointLight
         intensity={0.5}
         distance={0.5}
@@ -51,7 +44,6 @@ const SpikeBall = ({
         }}
       />
 
-      {/* Spikeball model */}
       <primitive
         object={clone}
         position={[0, 0, 0]}
