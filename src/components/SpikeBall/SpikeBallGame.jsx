@@ -30,16 +30,14 @@ const SpikeBallGame = ({
   const controlledPlayerRefs = useRef(players.map(() => React.createRef()));
 
   
-  // Ensure both players' scores are updated based on collisions.
+  // Player scores are updated based on collisions.
   const handleTurn = (playerIndex, collisionStatus) => {
     setScores((prevScores) => {
       const updatedScores = [...prevScores];
-      updatedScores[playerIndex] += collisionStatus * 10; // ✅ Fix: Ensure both players get updates
+      updatedScores[playerIndex] += collisionStatus * 10; 
       return updatedScores;
     });
   };
-  
-
 
   // Build updated players for Scoreboard.
   const updatedPlayers = processedPlayers.map((player, index) => {
@@ -58,8 +56,7 @@ const SpikeBallGame = ({
 
   return (
     <div style={{ width: "100vw", height: "100vh", position: "relative" }}>
-      {/* Render one Scoreboard for both players */}
-      <Scoreboard playerNames={players} scores={scores} />
+      <Scoreboard players={updatedPlayers} />
       <Canvas
         shadows
         camera={{ position: [0, 0, 10], fov: 10 }}
@@ -86,11 +83,11 @@ const SpikeBallGame = ({
                 //left={fpgaControls?.[1]?.left || false}
                 //right={fpgaControls?.[1]?.right || false}
                 still={fpgaControls?.[1]?.still || false}
-                playerRef={isLocal ? controlledPlayerRefs.current[index] : undefined}
+                playerRef={controlledPlayerRefs.current[index]}
                 ws={ws}
               />
             );
-          } else if (index === 1) {
+          } else if  (index === 1) {
             return (
               <PlayerWaluigi
                 key={`waluigi-${index}`}
@@ -101,7 +98,7 @@ const SpikeBallGame = ({
                 //left={fpgaControls?.[2]?.left || false}
                 //right={fpgaControls?.[2]?.right || false}
                 still={fpgaControls?.[2]?.still || false}
-                playerRef={isLocal ? controlledPlayerRefs.current[index] : undefined}
+                playerRef={controlledPlayerRefs.current[index]}
                 ws={ws}
               />
             );
@@ -113,7 +110,6 @@ const SpikeBallGame = ({
           playerRefs={controlledPlayerRefs.current}
           onTurn={handleTurn} 
           spawnInterval={2000}
-
           lifetime={4000}
         />
       </Canvas>

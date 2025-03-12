@@ -9,6 +9,7 @@ import ConnectionPopup from "./pages/ConnexionPopup/ConnectionPopup.jsx";
 import "./pages/Menu/Menu.css";
 import "./pages/RythmGame/RhythmGame.css";
 import "./pages/ModifierPage/ModifierPage.css";
+import SpikeBallGame from "./components/SpikeBall/SpikeBallGame.jsx";
 
 function Root() {
   const [gameStarted, setGameStarted] = useState(false);
@@ -22,6 +23,7 @@ function Root() {
   return (
     <StrictMode>
       <div className="container">
+        <SpikeBallGame />
         {!gameStarted && !modifierPage && !showPopup ? (
           <Menu
             onStart={(selectedPlayers, ws) => {
