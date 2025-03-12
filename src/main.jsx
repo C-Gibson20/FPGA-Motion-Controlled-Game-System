@@ -10,6 +10,7 @@ import "./pages/Menu/Menu.css";
 import "./pages/RythmGame/RhythmGame.css";
 import "./pages/ModifierPage/ModifierPage.css";
 import SpikeBallGame from "./components/SpikeBall/SpikeBallGame.jsx";
+import CoinGame from "./components/Coin/CoinGame.jsx";
 
 function Root() {
   const [gameStarted, setGameStarted] = useState(false);

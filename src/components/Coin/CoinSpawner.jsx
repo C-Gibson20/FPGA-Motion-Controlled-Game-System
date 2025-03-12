@@ -3,44 +3,31 @@ import { useFrame } from "@react-three/fiber";
 import Coin from "./Coin.jsx";
 import * as THREE from "three";
 
-const GROUND_Y = -0.65;
-const MIN_GRAVITY = 0.05;
-const MAX_GRAVITY = 1;
-
-const getSpawnPositionNear = (basePosition) => {
-  const [baseX, baseY, baseZ] = basePosition;
-  const x = baseX + (Math.random() * 0.8 - 0.4);
-  const y = baseY + 1.5;
-  const z = baseZ;
-  return [x, y, z];
-};
-
-const defaultStartPositions = [
-  [0, 0, 0],
-  [1, 0, 0]
+const getSpawnPositionNear = ([baseX, baseY, baseZ]) => [
+  baseX + (Math.random() * 0.8 - 0.4),
+  baseY + 1.5,
+  baseZ,
 ];
 
-const CoinSpawner = ({ startPositions, playerRef, onCoinCollect }) => {
+const defaultStartPositions = [[0, 0, 0], [1, 0, 0]];
+
+const CoinSpawner = ({ startPositions=defaultStartPositions, playerRef, onCoinCollect }) => {
   const effectiveStartPositions =
-    startPositions && startPositions.length >= 2
-      ? startPositions
-      : defaultStartPositions;
+    startPositions && startPositions.length >= 2 ? startPositions : defaultStartPositions;
 
   const [coins, setCoins] = useState([]);
   const coinVelocities = useRef({});
   const intervalRef = useRef(null);
+  const lastWasFirst = useRef(false);
 
   useEffect(() => {
-    let lastWasFirst = false; // Track which base was used last
-
     const spawnCoin = () => {
-      // Alternate between effectiveStartPositions[0] and effectiveStartPositions[1]
-      const base = effectiveStartPositions[lastWasFirst ? 1 : 0];
-      lastWasFirst = !lastWasFirst;
-
+      const baseIndex = lastWasFirst.current ? 1 : 0;
+      lastWasFirst.current = !lastWasFirst.current;
+      const base = effectiveStartPositions[baseIndex];
       const position = getSpawnPositionNear(base);
       const id = Date.now();
-      const gravity = Math.random() * (MAX_GRAVITY - MIN_GRAVITY) + MIN_GRAVITY;
+      const gravity = 0.95 * Math.random() + 0.05;
 
       setCoins(prev => [...prev, { id, position, gravity }]);
       coinVelocities.current[id] = 0;
@@ -48,10 +35,8 @@ const CoinSpawner = ({ startPositions, playerRef, onCoinCollect }) => {
 
     intervalRef.current = setInterval(spawnCoin, 1000);
 
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-    };
-  }, [effectiveStartPositions]);
+    return () => clearInterval(intervalRef.current);
+    }, [effectiveStartPositions]);
 
   const collectCoin = (coinId) => {
     setCoins(prev => prev.filter(coin => coin.id !== coinId));
@@ -61,7 +46,6 @@ const CoinSpawner = ({ startPositions, playerRef, onCoinCollect }) => {
   };
 
   useFrame((state, delta) => {
-    // Use optional chaining and a default value if playerRef.current is null.
     const playerPos = playerRef?.current?.position || new THREE.Vector3(0, 0, 0);
 
     setCoins(prevCoins => {
@@ -75,15 +59,13 @@ const CoinSpawner = ({ startPositions, playerRef, onCoinCollect }) => {
         y += velocity * delta;
         coinVelocities.current[id] = velocity;
 
-        // Remove coin if it hits the ground.
-        if (y <= GROUND_Y) {
+        if (y <= -0.65) {
           delete coinVelocities.current[id];
           return;
         }
 
-        // Check for collision with the player.
         const coinPos = new THREE.Vector3(x, y, z);
-        if (playerPos.distanceTo(coinPos) < 0.5) {
+        if (playerPos.distanceTo(coinPos) < 0.2) {
           collectCoin(id);
           return;
         }
@@ -97,7 +79,11 @@ const CoinSpawner = ({ startPositions, playerRef, onCoinCollect }) => {
   return (
     <>
       {coins.map((coin) => (
-        <Coin key={coin.id} position={coin.position} onCollect={() => collectCoin(coin.id)} />
+        <Coin 
+          key={coin.id} 
+          position={coin.position} 
+          onCollect={() => collectCoin(coin.id)} 
+        />
       ))}
     </>
   );

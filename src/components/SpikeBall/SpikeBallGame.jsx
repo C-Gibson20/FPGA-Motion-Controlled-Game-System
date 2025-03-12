@@ -1,7 +1,5 @@
-import React, { useState, useEffect, useRef } from "react";
-import { Canvas, useThree } from "@react-three/fiber";
-import { useTexture } from "@react-three/drei";
-import * as THREE from "three";
+import React, { useState, useRef } from "react";
+import { Canvas } from "@react-three/fiber";
 import Scoreboard from "../../pages/RythmGame/Scoreboard.jsx";
 import PlayerMario from "../../components/Player/PlayerMario.jsx";
 import PlayerWaluigi from "../../components/Player/PlayerWaluigi.jsx";

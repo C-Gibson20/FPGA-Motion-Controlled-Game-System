@@ -10,7 +10,6 @@ const Coin = ({ position, onCollect }) => {
 
   useEffect(() => {
     if (scene) {
-      // Clone the scene so we can modify it without affecting the original.
       const clonedScene = scene.clone(true);
       clonedScene.traverse((child) => {
         if (child.isMesh) {
@@ -18,14 +17,12 @@ const Coin = ({ position, onCollect }) => {
           child.castShadow = true;
           child.receiveShadow = true;
         }
-        // Force the coin to be on layer 2.
         child.layers.set(2);
       });
       setClone(clonedScene);
     }
   }, [scene]);
 
-  // Rotate the coin.
   useFrame(() => {
     if (coinGroupRef.current) {
       coinGroupRef.current.rotation.y += 0.05;
@@ -36,9 +33,8 @@ const Coin = ({ position, onCollect }) => {
 
   return (
     <group ref={coinGroupRef} position={position}>
-      {/* Local ambient light for coins: only affects layer 2 */}
       <pointLight
-        intensity={0.5} // A very low intensity to provide minimal fill
+        intensity={0.5}
         distance={0.05}
         color="gold"
         position={[0, 0, 0]}
