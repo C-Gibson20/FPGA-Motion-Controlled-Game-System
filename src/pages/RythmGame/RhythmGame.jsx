@@ -58,39 +58,34 @@ const RhythmGame = ({ gameSel, players = [], modifier, ws, onExit }) => {
         console.log("RhythmGame received message:", event.data);
         try {
           const payload = JSON.parse(event.data);
-          if (payload.type === 'data') {
-            // If hit commands are sent, trigger hit.
-            if (payload.button1 || payload.button2) {
-              triggerHit(payload.player - 1);
-            } else {
-              // Convert the payload.data value into control booleans.
-              const controls = { jump: false, left: false, right: false, still: false };
-              switch (payload.data) {
-                case 'J':
-                  controls.jump = true;
-                  break;
-                case 'L':
-                  controls.left = true;
-                  break;
-                case 'R':
-                  controls.right = true;
-                  break;
-                case 'N':
-                  controls.still = true;
-                  break;
-                case 'B1':
-                  // Check: is this intended to also be a jump, or should it be a different control?
-                  controls.jump = true;
-                  break;
-                default:
-                  break;
-              }
-              // Update fpgaControls for the given player (assumed 1-indexed)
-              setFpgaControls(prev => ({
-                ...prev,
-                [payload.player]: controls
-              }));
+          if (payload.type === 'data') {             
+            // Convert the payload.data value into control booleans.
+            const controls = { jump: false, left: false, right: false, still: false };
+            switch (payload.data) {
+              case 'J':
+                controls.jump = true;
+                break;
+              case 'L':
+                controls.left = true;
+                break;
+              case 'R':
+                controls.right = true;
+                break;
+              case 'N':
+                controls.still = true;
+                break;
+              case 'B1':
+                controls.jump = true;
+                break;
+              default:
+                break;
             }
+            // Update fpgaControls for the given player (assumed 1-indexed)
+            setFpgaControls(prev => ({
+              ...prev,
+              [payload.player]: controls
+            }));
+          
           }
         } catch (err) {
           console.error("Error parsing message:", err);
