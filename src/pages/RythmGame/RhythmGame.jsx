@@ -43,7 +43,7 @@ const RhythmGame = ({ gameSel, players = [], modifier, ws, onExit }) => {
           const payload = JSON.parse(event.data);
           if (payload.type === 'data') {             
             // Convert the payload.data value into control booleans.
-            const controls = { jump: false, left: false, right: false, still: false };
+            const controls = { jump: false, left: false, right: false, still: false, click: false };
             switch (payload.data) {
               case 'J':
                 controls.jump = true;
@@ -59,6 +59,9 @@ const RhythmGame = ({ gameSel, players = [], modifier, ws, onExit }) => {
                 break;
               case 'B1':
                 controls.jump = true;
+                break;
+              case 'B2':
+                controls.click = true;
                 break;
               default:
                 break;
