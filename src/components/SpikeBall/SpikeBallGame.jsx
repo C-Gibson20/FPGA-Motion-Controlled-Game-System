@@ -3,10 +3,8 @@ import { Canvas } from "@react-three/fiber";
 import Scoreboard from "../../pages/RythmGame/Scoreboard.jsx";
 import PlayerMario from "../../components/Player/PlayerMario.jsx";
 import PlayerWaluigi from "../../components/Player/PlayerWaluigi.jsx";
-import "./SpikeBallGame.css";
 import SpikeBallSpawner from "./SpikeBallSpawner.jsx";
 import Background from "../../pages/RythmGame/Background.jsx";
-
 
 const SpikeBallGame = ({
   players = ["Mario", "Waluigi"],
@@ -14,21 +12,16 @@ const SpikeBallGame = ({
   ws,
   localPlayerName = "Mario"
 }) => {
-  // Process players: if players are passed as strings, wrap them into objects.
+  // Process players
   const processedPlayers = players.map(p =>
     typeof p === "string" ? { username: p } : p
   );
   const numPlayers = processedPlayers.length;
   if (numPlayers === 0) return <div>No players</div>;
 
-  // Initialize scores and lives arrays.
   const [scores, setScores] = useState(Array(numPlayers).fill(0));
-
-  // Create an array of refs for each player.
   const controlledPlayerRefs = useRef(players.map(() => React.createRef()));
 
-  
-  // Player scores are updated based on collisions.
   const handleTurn = (playerIndex, collisionStatus) => {
     setScores((prevScores) => {
       const updatedScores = [...prevScores];
@@ -40,7 +33,6 @@ const SpikeBallGame = ({
   // Build updated players for Scoreboard.
   const updatedPlayers = processedPlayers.map((player, index) => {
     const username = player.username;
-    // Calculate an even spread for positions.
     const spacing = 10 / Math.max(1, numPlayers);
     let xPos = -3 + index * spacing;
     xPos = xPos * 0.3;

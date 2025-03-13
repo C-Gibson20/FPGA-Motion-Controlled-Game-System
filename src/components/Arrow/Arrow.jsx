@@ -20,9 +20,7 @@ const Arrow = ({ type, position }) => {
   return (
     <div
       className={`arrow arrow-${type}`}
-      style={{
-        transform: `translate(${position.x}px, ${position.y}px)`,
-      }}
+      style={{transform: `translate(${position.x}px, ${position.y}px)`,}}
     >
       <div className="arrow-icon">{iconMap[type]}</div>
     </div>

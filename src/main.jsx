@@ -5,12 +5,12 @@ import Menu from "./pages/Menu/Menu.jsx";
 import ModifierPage from "./pages/ModifierPage/ModifierPage.jsx";
 import GameSel from "./pages/GameSel/GameSel.jsx";
 import RhythmGame from "./pages/RythmGame/RhythmGame.jsx";
-import ConnectionPopup from "./pages/ConnexionPopup/ConnectionPopup.jsx";
 import "./pages/Menu/Menu.css";
 import "./pages/RythmGame/RhythmGame.css";
 import "./pages/ModifierPage/ModifierPage.css";
 import SpikeBallGame from "./components/SpikeBall/SpikeBallGame.jsx";
 import CoinGame from "./components/Coin/CoinGame.jsx";
+import ArrowGame from "./components/Arrow/ArrowGame.jsx";
 
 function Root() {
   const [gameStarted, setGameStarted] = useState(false);
@@ -24,7 +24,6 @@ function Root() {
   return (
     <StrictMode>
       <div className="container">
-        <SpikeBallGame />
         {!gameStarted && !modifierPage && !showPopup ? (
           <Menu
             onStart={(selectedPlayers, ws) => {

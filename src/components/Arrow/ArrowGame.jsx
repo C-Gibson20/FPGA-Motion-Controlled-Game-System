@@ -3,48 +3,55 @@ import Arrow from "./Arrow.jsx";
 import Scoreboard from "../../pages/RythmGame/Scoreboard.jsx";
 import PlayerMario from "../../components/Player/PlayerMario.jsx";
 import PlayerWaluigi from "../../components/Player/PlayerWaluigi.jsx";
-import { Canvas, useThree } from "@react-three/fiber";
+import { Canvas } from "@react-three/fiber";
 import "./Arrow.css";
-import { useTexture } from "@react-three/drei";
-import * as THREE from "three";
+import Background from "../../pages/RythmGame/Background.jsx";
 
 const TARGET_X = 80;
-const HIT_WINDOW = 50; // Wide detection margin
-const ARROW_SPEED = 5; // Visual speed multiplier
+const HIT_WINDOW = 50; 
+const ARROW_SPEED = 4; 
 const LOOP_DURATION = 5500;
 const BEATMAP = [
   { time: 0, type: "ArrowUp" },
   { time: 1500, type: "ArrowLeft" },
-  { time: 3000, type: "ArrowDown" },
+  { time: 3000, type: "ArrowUp" },
   { time: 4500, type: "ArrowRight" },
-  { time: 6000, type: " " },
+  { time: 6000, type: "ArrowLeft" },
 
   // Main Section (6000 - 18000ms)
   { time: 7500, type: "ArrowUp" },
   { time: 9000, type: "ArrowLeft" },
-  { time: 10500, type: "ArrowDown" },
+  { time: 10500, type: "ArrowUp" },
   { time: 12000, type: "ArrowRight" },
   { time: 13500, type: "ArrowUp" },
   { time: 15000, type: "ArrowLeft" },
-  { time: 16500, type: "ArrowDown" },
+  { time: 16500, type: "ArrowUp" },
   { time: 18000, type: "ArrowRight" },
   
   // Outro/Transition (18000 - 24000ms)
-  { time: 19500, type: " " },
+  { time: 19500, type: "ArrowLeft" },
   { time: 21000, type: "ArrowUp" },
   { time: 22500, type: "ArrowLeft" },
-  { time: 24000, type: "ArrowDown" },
+  { time: 24000, type: "ArrowRight" },
 ];
 
-const Background = () => {
-  const texture = useTexture("/images/disco.jpg");
-  texture.encoding = THREE.sRGBEncoding;
-  texture.colorSpace = THREE.SRGBColorSpace;
-  const { scene } = useThree();
-  useEffect(() => {
-    scene.background = texture;
-  }, [scene, texture]);
-  return null;
+const COMMAND_MAPPING = {
+  L: "ArrowLeft", R: "ArrowRight", J: "ArrowUp", B1: "ArrowUp",
+};
+
+const getCurrentLoopInfo = (elapsed) => {
+  const loopNumber = Math.floor(elapsed / LOOP_DURATION);
+  return { loopNumber, loopStart: loopNumber * LOOP_DURATION };
+};
+
+const getAnimationState = (command) => {
+  const baseState = { jumpLow: false, left: false, right: false, still: false };
+  switch (command) {
+    case "J": case "B1": return { ...baseState, jumpLow: true };
+    case "L": return { ...baseState, left: true };
+    case "R": return { ...baseState, right: true };
+    default: return baseState;
+  }
 };
 
 const ArrowGame = ({
@@ -53,98 +60,121 @@ const ArrowGame = ({
   ws,
   localPlayerName = "Mario"
 }) => {
-  // Process players into objects.
   const processedPlayers = players.map(p =>
     typeof p === "string" ? { username: p } : p
   );
   const numPlayers = processedPlayers.length;
   if (numPlayers === 0) return <div>No players</div>;
 
-  // Scores state.
   const [scores, setScores] = useState(Array(numPlayers).fill(0));
-  // Feedback state: keyed by player index (or "global").
   const [feedback, setFeedback] = useState({});
-  // Local animation state for each player (properly initialized).
   const [localAnim, setLocalAnim] = useState(
     Array.from({ length: numPlayers }, () => ({
       jumpLow: false,
       left: false,
-      right: false,
-      still: true
+      right: false 
     }))
   );
-  // Flat arrow stream.
   const [arrows, setArrows] = useState([]);
+
   const arrowsRef = useRef([]);
   const arrowIdCounter = useRef(0);
   const spawnedIndices = useRef({ loop: null, set: new Set() });
-  // Input lock (if needed for animations).
-  const inputLock = useRef(false);
-
-  // Refs for controlled player components.
   const controlledPlayerRefs = useRef([]);
+  const feedbackRef = useRef({});
+
   useEffect(() => {
     controlledPlayerRefs.current = Array(numPlayers)
       .fill(null)
       .map((_, i) => controlledPlayerRefs.current[i] || React.createRef());
   }, [numPlayers]);
 
-  // Utility: get current loop info.
-  const getCurrentLoopInfo = (elapsed) => {
-    const loopNumber = Math.floor(elapsed / LOOP_DURATION);
-    const loopStart = loopNumber * LOOP_DURATION;
-    return { loopNumber, loopStart };
+  const showFeedback = (key, text, color) => {
+    setFeedback(prev => ({ ...prev, [key]: { text, color } }));
+    clearTimeout(feedbackRef.current[key]);
+    feedbackRef.current[key] = setTimeout(() => {
+      setFeedback(prev => {
+        const updated = { ...prev };
+        delete updated[key];
+        return updated;
+      });
+    }, 600);
   };
 
-  // Arrow animation loop: spawns arrows from BEATMAP and moves them.
+  const handleInputCommand = (action, playerIndex) => {
+    const animState = getAnimationState(action);
+    setLocalAnim(prev => {
+      const updated = [...prev];
+      updated[playerIndex] = animState;
+      return updated;
+    });
+
+    const expectedType = COMMAND_MAPPING[action] || "";
+    const matchIndex = arrowsRef.current.findIndex(
+      (arrow) =>
+        arrow.type?.toLowerCase() === expectedType.toLowerCase()
+        && !arrow.missed 
+        && Math.abs(arrow.position.x - TARGET_X) < HIT_WINDOW
+    );
+
+    if (matchIndex !== -1) {
+      const arrow = arrowsRef.current[matchIndex];
+      const distance = Math.abs(arrow.position.x - TARGET_X);
+      const points = distance < 30 ? 2 : 1;
+
+      setScores(prev => {
+        const updated = [...prev];
+        updated[playerIndex] += points;
+        return updated;
+      });
+
+      showFeedback(playerIndex, distance < 30 ? "Great!" : "Good!", distance < 30 ? "lime" : "yellow");
+      arrowsRef.current.splice(matchIndex, 1);
+      setArrows([...arrowsRef.current]);
+    }
+  };
+
+  // Arrow animation loop
   useEffect(() => {
-    let lastFrameTime = performance.now();
     const gameStart = performance.now();
+    let lastFrameTime = gameStart;
     let currentLoop = 0;
+
     const animate = (now) => {
       const delta = now - lastFrameTime;
       const elapsed = now - gameStart;
-      lastFrameTime = now;
       const secondsDelta = delta / 1000;
       const moveX = ARROW_SPEED * 60 * secondsDelta;
+      lastFrameTime = now;
+      
       const { loopNumber, loopStart } = getCurrentLoopInfo(elapsed);
       if (loopNumber !== currentLoop) {
         spawnedIndices.current = { loop: loopNumber, set: new Set() };
         currentLoop = loopNumber;
       }
-      // Move arrows.
+      
       // Move arrows
-      arrowsRef.current = arrowsRef.current
-      .map((arrow) => {
+      arrowsRef.current = arrowsRef.current.map((arrow) => {
         const newX = arrow.position.x - moveX;
         if (!arrow.missed && newX < TARGET_X - HIT_WINDOW) {
-          // For each player, show miss feedback individually.
-          for (let p = 0; p < numPlayers; p++) {
-            showFeedback(p, "Miss", "red");
-          }
+          Array(numPlayers).fill(0).forEach((_, p) => showFeedback(p, "Miss", "red"));
           return { ...arrow, missed: true, position: { ...arrow.position, x: newX } };
         }
         return { ...arrow, position: { ...arrow.position, x: newX } };
-      })
-      .filter((arrow) => arrow.position.x > -100);
-
+      }).filter((arrow) => arrow.position.x > -100);
       
       // Spawn new arrows.
       BEATMAP.forEach((beat, index) => {
         const beatTime = loopStart + beat.time;
         const spawnKey = `${currentLoop}-${index}`;
         const timeUntilBeat = beatTime - elapsed;
-        if (
-          timeUntilBeat <= 0 &&
-          timeUntilBeat > -16.67 &&
-          !spawnedIndices.current.set.has(spawnKey)
-        ) {
+
+        if (timeUntilBeat <= 0 && timeUntilBeat > -16.67 && !spawnedIndices.current.set.has(spawnKey)) {
           arrowsRef.current.push({
             id: arrowIdCounter.current++,
             type: beat.type,
             position: { x: window.innerWidth, y: 0 },
             missed: false,
-            // No specific playerIndex on spawn.
           });
           spawnedIndices.current.set.add(spawnKey);
         }
@@ -155,103 +185,55 @@ const ArrowGame = ({
     };
     const animationId = requestAnimationFrame(animate);
     return () => cancelAnimationFrame(animationId);
-  }, []);
-
-  // Feedback handling: display feedback for each player.
-  const feedbackRef = useRef({});
-  const showFeedback = (playerIndexOrGlobal, text, color) => {
-    const key = typeof playerIndexOrGlobal === "number" ? playerIndexOrGlobal : "global";
-    setFeedback(prev => ({ ...prev, [key]: { text, color } }));
-    if (feedbackRef.current[key]) {
-      clearTimeout(feedbackRef.current[key]);
-    }
-    feedbackRef.current[key] = setTimeout(() => {
-      setFeedback(prev => {
-        const newFb = { ...prev };
-        delete newFb[key];
-        return newFb;
-      });
-    }, 600);
-  };
-
-  // Mapping from FPGA command to expected arrow type.
-  const commandMapping = {
-    "L": "ArrowLeft",
-    "R": "ArrowRight",
-    "J": "ArrowUp",
-    "N": " ",
-    "B1": "ArrowUp"
-  };
+  }, [numPlayers]);
 
   // WebSocket message handler: update animation state and process arrow hit.
   useEffect(() => {
-    if (ws) {
-      const messageHandler = async (event) => {
-        try {
-          const payload = JSON.parse(event.data);
-          if (payload.type === "data") {
-            const playerIndex = payload.player - 1; // 0-indexed
-            if (playerIndex >= 0 && playerIndex < numPlayers) {
-              console.log(`FPGA Input: Player ${playerIndex + 1}, Action: ${payload.data}`);
-              // Update animation state for the player.
-              let newAnimState = { jumpLow: false, left: false, right: false, still: false };
-              switch (payload.data) {
-                case "J":
-                  newAnimState.jumpLow = true;
-                  break;
-                case "L":
-                  newAnimState.left = true;
-                  break;
-                case "R":
-                  newAnimState.right = true;
-                  break;
-                case "N":
-                  newAnimState.still = true;
-                  break;
-                case "B1":
-                  newAnimState.jumpLow = true;
-                  break;
-                default:
-                  console.warn("Unknown FPGA command:", payload.data);
-                  return;
-              }
-              setLocalAnim(prev => {
-                const updated = [...prev];
-                updated[playerIndex] = newAnimState;
-                return updated;
-              });
-              
-              // Check for a matching arrow.
-              const expectedType = commandMapping[payload.data] || "";
-              const matchIndex = arrowsRef.current.findIndex(
-                (arrow) =>
-                  arrow.type.toLowerCase() === expectedType.toLowerCase() &&
-                  !arrow.missed &&
-                  Math.abs(arrow.position.x - TARGET_X) < HIT_WINDOW
-              );
-              if (matchIndex !== -1) {
-                const arrow = arrowsRef.current[matchIndex];
-                const distance = Math.abs(arrow.position.x - TARGET_X);
-                let scoreIncrement = distance < 30 ? 2 : 1;
-                setScores(prev => {
-                  const updated = [...prev];
-                  updated[playerIndex] += scoreIncrement;
-                  return updated;
-                });
-                showFeedback(playerIndex, distance < 30 ? "Great!" : "Good!", distance < 30 ? "lime" : "yellow");
-                arrowsRef.current.splice(matchIndex, 1);
-                setArrows([...arrowsRef.current]);
-              }
-            }
-          }
-        } catch (err) {
-          console.error("Error parsing message:", err);
-        }
-      };
-      ws.addEventListener("message", messageHandler);
-      return () => ws.removeEventListener("message", messageHandler);
-    }
+    if (!ws) return;
+    const messageHandler = async (event) => {
+      try {
+        const payload = JSON.parse(event.data);
+        if (payload.type !== "data") return;
+        const playerIndex = payload.player - 1; 
+        if (playerIndex < 0 || playerIndex >= numPlayers) return;
+        handleInputCommand(payload.data, playerIndex);
+      } catch (err) {
+        console.error("Error parsing message:", err);
+      }
+    };
+    ws.addEventListener("message", messageHandler);
+    return () => ws.removeEventListener("message", messageHandler);
   }, [ws, numPlayers]);
+
+  useEffect(() => {
+    const KEY_MAP = {
+      ArrowUp: "J",
+      ArrowLeft: "L",
+      ArrowRight: "R",
+    };
+
+    const pressedKeys = new Set();
+
+    const handleKeyDown = (e) => {
+      const cmd = KEY_MAP[e.key];
+      if (!cmd || pressedKeys.has(cmd)) return;
+      pressedKeys.add(cmd);
+      handleInputCommand(cmd, 0);
+    };
+
+    const handleKeyUp = (e) => {
+      if (!KEY_MAP[e.key]) return;
+      pressedKeys.delete(KEY_MAP[e.key]);
+      handleInputCommand("N", 0);
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+    };
+  }, []);
 
   // Build updated players for Scoreboard.
   const updatedPlayers = processedPlayers.map((player, index) => {
@@ -268,7 +250,7 @@ const ArrowGame = ({
 
   return (
     <div className="arrow-game-wrapper">
-      <Scoreboard playerNames={players} scores={scores} />
+      <Scoreboard players={updatedPlayers} />
       <div className="arrow-game-container">
         <div className="hit-line" style={{ left: `${TARGET_X}px` }} />
         {arrows.map((arrow) => (
@@ -284,31 +266,17 @@ const ArrowGame = ({
           <div
             key={`feedback-${index}`}
             className="hit-feedback"
-            style={{
-              position: "absolute",
-              left: index === 0 ? "250px" : "800px", // Player 0 on left, Player 1 on right.
-              top: "120px", // Adjust vertical positioning as needed.
-              color: feedback[index].color,
-            }}
+            style={{position: "absolute", left: index === 0 ? "250px" : "800px", top: "120px", color: feedback[index].color }}
           >
             {feedback[index].text}
           </div>
         )
       ))}
-
-
       <Canvas
-        style={{
-          position: "absolute",
-          top: 0,
-          left: 0,
-          width: "100vw",
-          height: "100vh",
-          zIndex: 0,
-        }}
+        style={{ position: "absolute", top: 0, left: 0, width: "100vw", height: "100vh", zIndex: 0 }}
         camera={{ position: [0, 0, 10], fov: 10 }}
       >
-        <Background />
+        <Background imagePath={"/images/disco.jpg"}/>
         <ambientLight intensity={4} />
         {processedPlayers.map((player, index) => {
           const isLocal = player.username === localPlayerName;
@@ -317,7 +285,7 @@ const ArrowGame = ({
               <PlayerMario
                 key={`mario-${index}`}
                 username={player.username}
-                initialPosition={[-1, -0.7, 0]} // Fixed position
+                initialPosition={[-1, -0.7, 0]} 
                 isPlayerPlayer={isLocal}
                 jumpLow={localAnim[index]?.jumpLow || false}
                 left={localAnim[index]?.left || false}
@@ -332,7 +300,7 @@ const ArrowGame = ({
               <PlayerWaluigi
                 key={`waluigi-${index}`}
                 username={player.username}
-                initialPosition={[1, -0.7, 0]} // Fixed position
+                initialPosition={[1, -0.7, 0]} 
                 isPlayerPlayer={isLocal}
                 jumpLow={localAnim[index]?.jumpLow || false}
                 left={localAnim[index]?.left || false}
