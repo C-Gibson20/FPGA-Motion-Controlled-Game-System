@@ -30,7 +30,6 @@ function Root() {
               setPlayers(selectedPlayers);
               setWsInstance(ws);
               setGameSel(null);
-              // For multiplayer, show the connection popup; otherwise, go directly to modifier.
               setShowPopup(true);
               setModifierPage(true);
             }}
