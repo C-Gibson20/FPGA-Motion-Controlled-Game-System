@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useRef } from "react";
 import { Canvas } from "@react-three/fiber";
 import Scoreboard from "../../pages/RythmGame/Scoreboard.jsx";
 import PlayerMario from "../../components/Player/PlayerMario.jsx";
@@ -10,7 +10,9 @@ const SpikeBallGame = ({
   players = ["Mario", "Waluigi"],
   fpgaControls = {},
   ws,
-  localPlayerName = "Mario"
+  localPlayerName = "Mario",
+  scores,           // *** NEW: Global scores passed as a prop from the parent.
+  onScoreIncrement  // *** NEW: Global updater function passed as a prop.
 }) => {
   // Process players
   const processedPlayers = players.map(p =>
@@ -19,18 +21,18 @@ const SpikeBallGame = ({
   const numPlayers = processedPlayers.length;
   if (numPlayers === 0) return <div>No players</div>;
 
-  const [scores, setScores] = useState(Array(numPlayers).fill(0));
+  // Create refs for controlled players.
   const controlledPlayerRefs = useRef(players.map(() => React.createRef()));
 
+  // *** CHANGED: Instead of managing local scores, use onScoreIncrement to update global scores.
   const handleTurn = (playerIndex, collisionStatus) => {
-    setScores((prevScores) => {
-      const updatedScores = [...prevScores];
-      updatedScores[playerIndex] += collisionStatus * 10; 
-      return updatedScores;
-    });
+    // For example, collisionStatus might be 1 for a successful hit and -1 for a miss.
+    if (onScoreIncrement) {
+      onScoreIncrement(playerIndex, collisionStatus * 10); // Multiply by 10 points per collision status.
+    }
   };
 
-  // Build updated players for Scoreboard.
+  // Build updated players for the Scoreboard using the global scores.
   const updatedPlayers = processedPlayers.map((player, index) => {
     const username = player.username;
     const spacing = 10 / Math.max(1, numPlayers);
@@ -39,7 +41,7 @@ const SpikeBallGame = ({
     return {
       username,
       position: [xPos, -0.7, 0],
-      score: username === localPlayerName ? scores[index] : scores[index] || 0,
+      score: scores[index] || 0, // *** CHANGED: Use global score for each player.
       avatar: index === 0 ? "/images/mario.png" : "/images/waluigi.png",
     };
   });
@@ -57,7 +59,7 @@ const SpikeBallGame = ({
         }}
         style={{ display: "block" }}
       >
-        <Background  imagePath="/images/Bowser.jpg"/>
+        <Background imagePath="/images/Bowser.jpg" />
         <directionalLight castShadow intensity={1} position={[5, 5, 5]} />
 
         {updatedPlayers.map((player, index) => {
@@ -77,7 +79,7 @@ const SpikeBallGame = ({
                 ws={ws}
               />
             );
-          } else if  (index === 1) {
+          } else if (index === 1) {
             return (
               <PlayerWaluigi
                 key={`waluigi-${index}`}
