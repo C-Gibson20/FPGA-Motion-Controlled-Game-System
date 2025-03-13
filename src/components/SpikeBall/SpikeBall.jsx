@@ -8,7 +8,7 @@ const PARTICLE_LIFETIME = 1.5;
 const SpikeBall = ({
   position = [1.5, -0.25, 0]
 }) => {
-  const { scene } = useGLTF("models/BanzaiBIll.glb");
+  const { scene } = useGLTF("/models/BanzaiBIll.glb");
   const groupRef = useRef();
   const [clone, setClone] = useState(null);
 
