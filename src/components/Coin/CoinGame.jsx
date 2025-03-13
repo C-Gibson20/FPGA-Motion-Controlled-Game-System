@@ -15,14 +15,13 @@ const CoinGame = ({
   localPlayerName = "Mario",
   onScoreIncrement
 }) => {
-  
   const processedPlayers = players.map((p) =>
     typeof p === "string" ? { username: p } : p
   );
   const numPlayers = processedPlayers.length;
   if (numPlayers === 0) return <div>No players</div>;
 
-  const safeScores = (scores && scores.length) ? scores : Array(numPlayers).fill(0)
+  const safeScores = (scores && scores.length) ? scores : Array(numPlayers).fill(0);
   
   // Create an array of refs for each player.
   const controlledPlayerRefs = useRef([]);
@@ -32,10 +31,10 @@ const CoinGame = ({
       .map((_, i) => controlledPlayerRefs.current[i] || React.createRef());
   }, [numPlayers]);
 
-  const handleCoinCollect = () => {
-    //setLocalScore(prev => prev + 1);
-    onScoreIncrement(0, 1);
-    console.log("Coin collected");
+  const handleCoinCollect = (playerIndex) => {
+    // Update score for the player who collected the coin.
+    onScoreIncrement(playerIndex, 1);
+    console.log("Coin collected by player:", playerIndex);
     console.log(scores);
   };
 
@@ -55,7 +54,6 @@ const CoinGame = ({
 
   return (
     <div style={{ width: "100vw", height: "100vh", overflow: "hidden", position: "relative" }}>
-
       <Canvas shadows camera={{ position: [0, 0, 10], fov: 10 }}
         onCreated={({ camera }) => {
           camera.layers.enable(0);
@@ -66,7 +64,7 @@ const CoinGame = ({
       >
         <Background imagePath={"/images/Castel.jpg"}/>
         <directionalLight position={[10, 10, 5]} castShadow />
-
+        
         {updatedPlayers.map((player, index) => {
           const isLocal = player.username === localPlayerName;
           if (index === 0) {
@@ -103,7 +101,7 @@ const CoinGame = ({
         })}
         <CoinSpawner
           startPositions={startPositions || updatedPlayers.map(p => p.position)}
-          playerRef={controlledPlayerRefs.current[0] || undefined}
+          playerRefs={controlledPlayerRefs.current}
           onCoinCollect={(playerIndex) => handleCoinCollect(playerIndex)}
         />
       </Canvas>

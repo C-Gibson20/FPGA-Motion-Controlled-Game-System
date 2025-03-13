@@ -11,7 +11,7 @@ const getSpawnPositionNear = ([baseX, baseY, baseZ]) => [
 
 const defaultStartPositions = [[0, 0, 0], [1, 0, 0]];
 
-const CoinSpawner = ({ startPositions=defaultStartPositions, playerRef, onCoinCollect }) => {
+const CoinSpawner = ({ startPositions = defaultStartPositions, playerRefs, onCoinCollect }) => {
   const effectiveStartPositions =
     startPositions && startPositions.length >= 2 ? startPositions : defaultStartPositions;
 
@@ -20,13 +20,15 @@ const CoinSpawner = ({ startPositions=defaultStartPositions, playerRef, onCoinCo
   const intervalRef = useRef(null);
   const lastWasFirst = useRef(false);
 
+  // Spawn a new coin every second.
   useEffect(() => {
     const spawnCoin = () => {
       const baseIndex = lastWasFirst.current ? 1 : 0;
       lastWasFirst.current = !lastWasFirst.current;
       const base = effectiveStartPositions[baseIndex];
       const position = getSpawnPositionNear(base);
-      const id = Date.now();
+      // Use a unique id by combining Date.now with a random number.
+      const id = Date.now() + Math.random();
       const gravity = 0.95 * Math.random() + 0.05;
 
       setCoins(prev => [...prev, { id, position, gravity }]);
@@ -34,20 +36,19 @@ const CoinSpawner = ({ startPositions=defaultStartPositions, playerRef, onCoinCo
     };
 
     intervalRef.current = setInterval(spawnCoin, 1000);
-
     return () => clearInterval(intervalRef.current);
-    }, [effectiveStartPositions]);
+  }, [effectiveStartPositions]);
 
-  const collectCoin = (coinId) => {
+  // Remove coin and notify which player collected it.
+  const collectCoin = (coinId, playerIndex) => {
     setCoins(prev => prev.filter(coin => coin.id !== coinId));
     delete coinVelocities.current[coinId];
-    if (onCoinCollect) onCoinCollect();
-    console.log("Coin collected!");
+    console.log("Coin collected by player:", playerIndex);
+    if (onCoinCollect) onCoinCollect(playerIndex);
   };
 
+  // Animate coins falling and check for collisions with each player's world position.
   useFrame((state, delta) => {
-    const playerPos = playerRef?.current?.position || new THREE.Vector3(0, 0, 0);
-
     setCoins(prevCoins => {
       const newCoins = [];
       prevCoins.forEach(coin => {
@@ -59,18 +60,35 @@ const CoinSpawner = ({ startPositions=defaultStartPositions, playerRef, onCoinCo
         y += velocity * delta;
         coinVelocities.current[id] = velocity;
 
+        // Remove coin if it falls off-screen.
         if (y <= -0.65) {
           delete coinVelocities.current[id];
           return;
         }
 
         const coinPos = new THREE.Vector3(x, y, z);
-        if (playerPos.distanceTo(coinPos) < 0.2) {
-          collectCoin(id);
-          return;
+        let collided = false;
+        
+        // Loop through all player refs and check collisions.
+        if (playerRefs && playerRefs.length > 0) {
+          for (let i = 0; i < playerRefs.length; i++) {
+            const ref = playerRefs[i];
+            if (ref && ref.current) {
+              const playerWorldPos = new THREE.Vector3();
+              ref.current.getWorldPosition(playerWorldPos);
+              // Use a collision threshold of 0.3 (adjust if needed)
+              if (playerWorldPos.distanceTo(coinPos) < 0.3) {
+                collectCoin(id, i);
+                collided = true;
+                break;
+              }
+            }
+          }
         }
-
-        newCoins.push({ ...coin, position: [x, y, z] });
+        
+        if (!collided) {
+          newCoins.push({ ...coin, position: [x, y, z] });
+        }
       });
       return newCoins;
     });
@@ -82,7 +100,7 @@ const CoinSpawner = ({ startPositions=defaultStartPositions, playerRef, onCoinCo
         <Coin 
           key={coin.id} 
           position={coin.position} 
-          onCollect={() => collectCoin(coin.id)} 
+          onCollect={() => collectCoin(coin.id, null)} 
         />
       ))}
     </>

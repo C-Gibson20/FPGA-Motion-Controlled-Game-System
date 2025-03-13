@@ -28,7 +28,7 @@ const SpikeBallGame = ({
   const handleTurn = (playerIndex, collisionStatus) => {
     // For example, collisionStatus might be 1 for a successful hit and -1 for a miss.
     if (onScoreIncrement) {
-      onScoreIncrement(playerIndex, collisionStatus * 10); // Multiply by 10 points per collision status.
+      onScoreIncrement(playerIndex, collisionStatus); // Multiply by 10 points per collision status.
     }
   };
 
