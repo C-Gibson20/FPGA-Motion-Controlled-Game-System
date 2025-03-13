@@ -4,9 +4,9 @@ import "./ConnectionPopup.css";
 const ConnectionPopup = ({ isConnected, playerConnections= {}, expectedPlayers, onClose, onStartGame }) => {
   const allPlayersConnected = Object.keys(playerConnections).length === expectedPlayers;
 
-  // if (expectedPlayers == 1) {
-    // onStartGame();
-  // }
+  if (expectedPlayers == 1) {
+    onStartGame();
+  }
 
   return (
     <div className="connection-popup">
