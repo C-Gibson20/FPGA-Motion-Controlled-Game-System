@@ -6,9 +6,6 @@ import GameSel from "./pages/GameSel/GameSel.jsx";
 import RhythmGame from "./pages/RythmGame/RhythmGame.jsx";
 import "./pages/Menu/Menu.css";
 import "./pages/RythmGame/RhythmGame.css";
-import SpikeBallGame from "./components/SpikeBall/SpikeBallGame.jsx";
-import CoinGame from "./components/Coin/CoinGame.jsx";
-import ArrowGame from "./components/Arrow/ArrowGame.jsx";
 
 function Root() {
   const [gameStarted, setGameStarted] = useState(false);
@@ -16,32 +13,48 @@ function Root() {
   const [players, setPlayers] = useState([]);
   const [showPopup, setShowPopup] = useState(false);
   const [wsInstance, setWsInstance] = useState(null);
+  const [scores, setScores] = useState([]); // Global score state
+
+  // When starting, initialize scores for each player.
+  const handleStart = (selectedPlayers, ws) => {
+    setPlayers(selectedPlayers);
+    setWsInstance(ws);
+    setScores(selectedPlayers.map(() => 0)); // Initialize scores for all players
+    setGameSel(null);
+    setShowPopup(true);
+  };
+
+  // Global score updater function.
+  const updateScore = (playerIndex, points) => {
+    setScores(prevScores => {
+      const newScores = [...prevScores];
+      newScores[playerIndex] += points;
+      return newScores;
+    });
+  };
 
   return (
     <StrictMode>
       <div className="container">
         {!gameStarted && !showPopup ? (
-          <Menu
-            onStart={(selectedPlayers, ws) => {
-              setPlayers(selectedPlayers);
-              setWsInstance(ws);
-              setGameSel(null);
-              setShowPopup(true);
-            }}
-          />
+          <Menu onStart={handleStart} />
         ) : !gameStarted && !gameSel ? (
           <GameSel
+            scores={scores} // Pass scores to GameSel so they can be displayed
+            players={players} // Pass player names too
             setGameSel={(selectedGame) => {
               setGameSel(selectedGame);
               setGameStarted(true); // Immediately start game when selected
             }}
-            onExit={() => setShowMenu(true)}
+            onExit={() => setShowPopup(true)}
           />
         ) : gameStarted ? (
-          // Always render RhythmGame as the wrapper
+          // Always render RhythmGame as the wrapper.
           <RhythmGame
             gameSel={gameSel}
             players={players}
+            scores={scores} // Use the global scores here
+            onScoreIncrement={updateScore} // Pass the updater
             ws={wsInstance}
             onExit={() => {
               setGameStarted(false);

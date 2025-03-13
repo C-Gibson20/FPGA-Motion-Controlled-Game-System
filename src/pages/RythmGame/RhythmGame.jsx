@@ -13,21 +13,12 @@ const GAMES = {
   'Disco Dash': ArrowGame
 };
 
-const RhythmGame = ({ gameSel, players = [], modifier, ws, onExit }) => {
+const RhythmGame = ({ gameSel, players = [], scores, onScoreIncrement, ws, onExit }) => {
   // players is expected to be an array of names, e.g. ["Mario", "Waluigi"]
-  const [message, setMessage] = useState('');
-  const [scores, setScores] = useState(players.map(() => 0));
+  // const [scores, setScores] = useState(players.map(() => 0));
   const [data, setData] = useState([]);
   // fpgaControls: object keyed by player number (1-indexed)
   const [fpgaControls, setFpgaControls] = useState({});
-
-  const updateScore = (playerIndex, points) => {
-    setScores(prevScores => {
-      const newScores = [...prevScores];
-      newScores[playerIndex] += points;
-      return newScores;
-    });
-  };
 
   useEffect(() => {
     axios.get('http://localhost:5001/scores')
@@ -98,7 +89,7 @@ const RhythmGame = ({ gameSel, players = [], modifier, ws, onExit }) => {
           players={players}
           scores={scores}
           fpgaControls={fpgaControls}
-          onScoreIncrement={updateScore}
+          onScoreIncrement={onScoreIncrement}
           onCoinCollect={() => console.log("Coin collected callback")}
           localPlayerName={players[0]}
           ws={ws}

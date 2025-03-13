@@ -22,8 +22,7 @@ const CoinGame = ({
   const numPlayers = processedPlayers.length;
   if (numPlayers === 0) return <div>No players</div>;
 
-  const safeScores = (scores && scores.length) ? scores : Array(numPlayers).fill(0);
-  const [localScore, setLocalScore] = useState(0);
+  const safeScores = (scores && scores.length) ? scores : Array(numPlayers).fill(0)
   
   // Create an array of refs for each player.
   const controlledPlayerRefs = useRef([]);
@@ -37,6 +36,7 @@ const CoinGame = ({
     //setLocalScore(prev => prev + 1);
     onScoreIncrement(0, 1);
     console.log("Coin collected");
+    console.log(scores);
   };
 
   // Calculate positions for players so that they are evenly spread.
@@ -48,14 +48,13 @@ const CoinGame = ({
     return {
       ...player,
       position: [xPos, -0.7, 0],
-      score: player.username === localPlayerName ? localScore : (safeScores[index] || 0),
+      score: safeScores[index] || 0,
       avatar: index === 0 ? "/images/mario.png" : "/images/waluigi.png",
     };
   });
 
   return (
     <div style={{ width: "100vw", height: "100vh", overflow: "hidden", position: "relative" }}>
-      {/* <Scoreboard players={updatedPlayers} /> */}
 
       <Canvas shadows camera={{ position: [0, 0, 10], fov: 10 }}
         onCreated={({ camera }) => {
