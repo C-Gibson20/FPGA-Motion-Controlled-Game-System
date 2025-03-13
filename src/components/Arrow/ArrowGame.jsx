@@ -12,31 +12,29 @@ const HIT_WINDOW = 50;
 const ARROW_SPEED = 4; 
 const LOOP_DURATION = 5500;
 const BEATMAP = [
-  { time: 0, type: "ArrowUp" },
+  { time: 0, type: " " },
   { time: 1500, type: "ArrowLeft" },
   { time: 3000, type: "ArrowUp" },
   { time: 4500, type: "ArrowRight" },
-  { time: 6000, type: "ArrowLeft" },
+  { time: 6000, type: " " },
 
   // Main Section (6000 - 18000ms)
-  { time: 7500, type: "ArrowUp" },
-  { time: 9000, type: "ArrowLeft" },
-  { time: 10500, type: "ArrowUp" },
-  { time: 12000, type: "ArrowRight" },
-  { time: 13500, type: "ArrowUp" },
-  { time: 15000, type: "ArrowLeft" },
-  { time: 16500, type: "ArrowUp" },
-  { time: 18000, type: "ArrowRight" },
+  { time: 10000, type: "ArrowLeft" },
+  { time: 11500, type: "ArrowUp" },
+  { time: 13000, type: "ArrowRight" },
+  { time: 14500, type: "ArrowUp" },
+  { time: 16000, type: "ArrowLeft" },
+  { time: 17500, type: "ArrowUp" },
+  { time: 18000, type: " " },
   
   // Outro/Transition (18000 - 24000ms)
-  { time: 19500, type: "ArrowLeft" },
-  { time: 21000, type: "ArrowUp" },
-  { time: 22500, type: "ArrowLeft" },
-  { time: 24000, type: "ArrowRight" },
+  { time: 23000, type: "ArrowUp" },
+  { time: 24500, type: "ArrowLeft" },
+  { time: 26000, type: "ArrowRight" },
 ];
 
 const COMMAND_MAPPING = {
-  L: "ArrowLeft", R: "ArrowRight", J: "ArrowUp", B1: "ArrowUp",
+  L: "ArrowLeft", R: "ArrowRight", J: "ArrowUp", B1: "ArrowUp", B2: " "
 };
 
 const getCurrentLoopInfo = (elapsed) => {
@@ -45,11 +43,12 @@ const getCurrentLoopInfo = (elapsed) => {
 };
 
 const getAnimationState = (command) => {
-  const baseState = { jumpLow: false, left: false, right: false, still: false };
+  const baseState = { jumpLow: false, left: false, right: false, still: false, click: false };
   switch (command) {
     case "J": case "B1": return { ...baseState, jumpLow: true };
     case "L": return { ...baseState, left: true };
     case "R": return { ...baseState, right: true };
+    case "B2": return { ...baseState, click: true };
     default: return baseState;
   }
 };
@@ -72,7 +71,8 @@ const ArrowGame = ({
     Array.from({ length: numPlayers }, () => ({
       jumpLow: false,
       left: false,
-      right: false 
+      right: false, 
+      click: false
     }))
   );
   const [arrows, setArrows] = useState([]);
@@ -266,7 +266,7 @@ const ArrowGame = ({
           <div
             key={`feedback-${index}`}
             className="hit-feedback"
-            style={{position: "absolute", left: index === 0 ? "250px" : "800px", top: "120px", color: feedback[index].color }}
+            style={{position: "absolute", left: index === 0 ? "250px" : "900px", top: "120px", color: feedback[index].color }}
           >
             {feedback[index].text}
           </div>
@@ -291,6 +291,7 @@ const ArrowGame = ({
                 left={localAnim[index]?.left || false}
                 right={localAnim[index]?.right || false}
                 still={localAnim[index]?.still || true}
+                click={localAnim[index]?.click || false}
                 playerRef={isLocal ? controlledPlayerRefs.current[index] : undefined}
                 ws={ws}
               />
@@ -306,6 +307,7 @@ const ArrowGame = ({
                 left={localAnim[index]?.left || false}
                 right={localAnim[index]?.right || false}
                 still={localAnim[index]?.still || true}
+                click={localAnim[index]?.click || false}
                 playerRef={isLocal ? controlledPlayerRefs.current[index] : undefined}
                 ws={ws}
               />

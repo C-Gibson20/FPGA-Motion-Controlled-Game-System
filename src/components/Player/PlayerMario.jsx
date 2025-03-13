@@ -13,12 +13,13 @@ const MODELS = {
   MarioVictory: { path: "/models/MarioVictory.glb", scale: 0.003 },
 };
 
-const PlayerMario = ({ username, isPlayerPlayer, initialPosition, playerRef, jumpLow, left, right, still }) => {
+const PlayerMario = ({ username, isPlayerPlayer, initialPosition, playerRef, jumpLow, left, right, still, click }) => {
   const [currentModel, setCurrentModel] = useState("MarioIdle");
   const groupRef = useRef();
   const activeAction = useRef(null);
   // Ref to ensure we trigger jump only once.
   const jumpTriggeredRef = useRef(false);
+  const clickTriggeredRef = useRef(false);
 
   // Forward group ref for external access.
   useEffect(() => {
@@ -33,12 +34,14 @@ const PlayerMario = ({ username, isPlayerPlayer, initialPosition, playerRef, jum
   // Load animations from separate GLTF files.
   const { animations: idleAnimations } = useGLTF(MODELS.MarioIdle.path);
   const { animations: jumpAnimations } = useGLTF(MODELS.MarioJump.path);
+  const { animations: clickAnimations } = useGLTF(MODELS.MarioBackFlip.path);
   const { animations: sideStepAnimations } = useGLTF(MODELS.MarioSideStep.path);
   const { animations: rightSideStepAnimations } = useGLTF(MODELS.MarioRightSideStep.path);
 
   // Create animation actions.
   const { actions: idleActions } = useAnimations(idleAnimations, groupRef);
   const { actions: jumpActions } = useAnimations(jumpAnimations, groupRef);
+  const { actions: clickActions } = useAnimations(clickAnimations, groupRef);
   const { actions: sideStepActions } = useAnimations(sideStepAnimations, groupRef);
   const { actions: rightSideStepActions } = useAnimations(rightSideStepAnimations, groupRef);
 
@@ -47,6 +50,7 @@ const PlayerMario = ({ username, isPlayerPlayer, initialPosition, playerRef, jum
   const jumpStrength = 0.07;
   const gravity = 0.9; // adjust as needed
   const isJumping = useRef(false);
+  const isBackFlipping = useRef(false);
   const keys = useRef({
     ArrowUp: false,
     ArrowDown: false,
@@ -99,6 +103,19 @@ const PlayerMario = ({ username, isPlayerPlayer, initialPosition, playerRef, jum
       // Reset our trigger when jumpLow is false.
       jumpTriggeredRef.current = false;
     }
+    if (click) {
+      // Only trigger jump once when click becomes true.
+      if (!clickTriggeredRef.current && !isBackFlipping.current) {
+        clickTriggeredRef.current = true;
+        isBackFlipping.current = true;
+        velocityY.current = jumpStrength;
+        if (currentModel !== "MarioBackFlip") setCurrentModel("MarioBackFlip");
+        playJumpSound();
+      }
+    } else {
+      // Reset our trigger when jumpLow is false.
+      clickTriggeredRef.current = false;
+    }
     if (left) {
       groupRef.current.position.x -= speed;
       if (currentModel !== "MarioSideStep") setCurrentModel("MarioSideStep");
@@ -109,7 +126,7 @@ const PlayerMario = ({ username, isPlayerPlayer, initialPosition, playerRef, jum
       if (currentModel !== "MarioRightSideStep") setCurrentModel("MarioRightSideStep");
       didMove = true;
     }
-    if (still && !didMove && !isJumping.current && currentModel !== "MarioIdle") {
+    if (still && !didMove && !isJumping.current && !isBackFlipping.current && currentModel !== "MarioIdle") {
       setCurrentModel("MarioIdle");
     }
 
@@ -155,7 +172,22 @@ const PlayerMario = ({ username, isPlayerPlayer, initialPosition, playerRef, jum
         action.setLoop(THREE.LoopOnce, 1);
         action.clampWhenFinished = true;
       }
-    } else if (currentModel === "MarioSideStep") {
+    } else if (currentModel === "MarioBackFlip") {
+      action = clickActions["mixamo.com"] || Object.values(clickActions)[0];
+      if (action) {
+        action.setLoop(THREE.LoopOnce, 1);
+        action.clampWhenFinished = true;
+        action.reset().fadeIn(0.2).play();
+    
+        // Use the animation clip's duration to schedule the reset.
+        const clipDuration = action.getClip().duration;
+        setTimeout(() => {
+          isBackFlipping.current = false;
+          setCurrentModel("MarioIdle"); // Reset to idle so new clicks trigger backflip
+        }, clipDuration * 1000);
+      }
+    }
+     else if (currentModel === "MarioSideStep") {
       action = sideStepActions["mixamo.com"] || Object.values(sideStepActions)[0];
       if (action) action.setLoop(THREE.LoopRepeat, Infinity);
     } else if (currentModel === "MarioRightSideStep") {
@@ -166,7 +198,7 @@ const PlayerMario = ({ username, isPlayerPlayer, initialPosition, playerRef, jum
       action.reset().fadeIn(0.2).play();
       activeAction.current = action;
     }
-  }, [currentModel, idleActions, jumpActions, sideStepActions, rightSideStepActions]);
+  }, [currentModel, idleActions, jumpActions, clickActions, sideStepActions, rightSideStepActions]);
 
   return (
     <group ref={groupRef} position={initialPosition}>
