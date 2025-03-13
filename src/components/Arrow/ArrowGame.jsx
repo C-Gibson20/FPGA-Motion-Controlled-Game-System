@@ -18,19 +18,19 @@ const BEATMAP = [
   { time: 4500, type: "ArrowRight" },
   { time: 6000, type: " " },
 
-  // Main Section (6000 - 18000ms)
-  { time: 10000, type: "ArrowLeft" },
-  { time: 11500, type: "ArrowUp" },
-  { time: 13000, type: "ArrowRight" },
-  { time: 14500, type: "ArrowUp" },
-  { time: 16000, type: "ArrowLeft" },
-  { time: 17500, type: "ArrowUp" },
-  { time: 18000, type: " " },
+  // Main Section (8000 - 20000ms)
+  { time: 12000, type: "ArrowLeft" },
+  { time: 13500, type: "ArrowUp" },
+  { time: 15000, type: "ArrowRight" },
+  { time: 16500, type: "ArrowUp" },
+  { time: 18000, type: "ArrowLeft" },
+  { time: 19500, type: "ArrowUp" },
+  { time: 20000, type: " " },
   
-  // Outro/Transition (18000 - 24000ms)
-  { time: 23000, type: "ArrowUp" },
-  { time: 24500, type: "ArrowLeft" },
-  { time: 26000, type: "ArrowRight" },
+  // Outro/Transition (20000 - 26000ms)
+  { time: 28000, type: "ArrowUp" },
+  { time: 30500, type: "ArrowLeft" },
+  { time: 32000, type: "ArrowRight" },
 ];
 
 const COMMAND_MAPPING = {
