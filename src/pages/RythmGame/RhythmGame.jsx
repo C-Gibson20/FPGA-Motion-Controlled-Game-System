@@ -21,6 +21,14 @@ const RhythmGame = ({ gameSel, players = [], modifier, ws, onExit }) => {
   // fpgaControls: object keyed by player number (1-indexed)
   const [fpgaControls, setFpgaControls] = useState({});
 
+  const updateScore = (playerIndex, points) => {
+    setScores(prevScores => {
+      const newScores = [...prevScores];
+      newScores[playerIndex] += points;
+      return newScores;
+    });
+  };
+
   useEffect(() => {
     axios.get('http://localhost:5001/scores')
       .then(response => setData(response.data))
@@ -81,7 +89,8 @@ const RhythmGame = ({ gameSel, players = [], modifier, ws, onExit }) => {
       {/* Render one Scoreboard for both players */}
       <Scoreboard players={players.map((name, index) => ({
         username: name,
-        score: scores[index] || 0
+        score: scores[index] || 0,
+        avatar: index === 0 ? "/images/mario.png" : "/images/waluigi.png",
       }))} />
       
       {SelectedGame ? (
@@ -89,6 +98,7 @@ const RhythmGame = ({ gameSel, players = [], modifier, ws, onExit }) => {
           players={players}
           scores={scores}
           fpgaControls={fpgaControls}
+          onScoreIncrement={updateScore}
           onCoinCollect={() => console.log("Coin collected callback")}
           localPlayerName={players[0]}
           ws={ws}

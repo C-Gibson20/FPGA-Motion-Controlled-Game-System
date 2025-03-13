@@ -54,10 +54,12 @@ const getAnimationState = (command) => {
 };
 
 const ArrowGame = ({
-  players = ["Mario", "Waluigi"],
   fpgaControls = {},
+  players = ["Mario", "Waluigi"],
+  scores,
   ws,
-  localPlayerName = "Mario"
+  localPlayerName = "Mario",
+  onScoreIncrement
 }) => {
   const processedPlayers = players.map(p =>
     typeof p === "string" ? { username: p } : p
@@ -65,7 +67,7 @@ const ArrowGame = ({
   const numPlayers = processedPlayers.length;
   if (numPlayers === 0) return <div>No players</div>;
 
-  const [scores, setScores] = useState(Array(numPlayers).fill(0));
+  // const [scores, setScores] = useState(Array(numPlayers).fill(0));
   const [feedback, setFeedback] = useState({});
   const [localAnim, setLocalAnim] = useState(
     Array.from({ length: numPlayers }, () => ({
@@ -122,11 +124,7 @@ const ArrowGame = ({
       const distance = Math.abs(arrow.position.x - TARGET_X);
       const points = distance < 30 ? 2 : 1;
 
-      setScores(prev => {
-        const updated = [...prev];
-        updated[playerIndex] += points;
-        return updated;
-      });
+      onScoreIncrement(playerIndex, points);
 
       showFeedback(playerIndex, distance < 30 ? "Great!" : "Good!", distance < 30 ? "lime" : "yellow");
       arrowsRef.current.splice(matchIndex, 1);
@@ -250,7 +248,6 @@ const ArrowGame = ({
 
   return (
     <div className="arrow-game-wrapper">
-      <Scoreboard players={updatedPlayers} />
       <div className="arrow-game-container">
         <div className="hit-line" style={{ left: `${TARGET_X}px` }} />
         {arrows.map((arrow) => (

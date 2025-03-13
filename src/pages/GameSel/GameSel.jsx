@@ -3,6 +3,7 @@ import './GameSel.css'; // Import the CSS
 import bulletBarrageImg from '../../assets/spikeBallGame.png';
 import coinCascadeImg from '../../assets/coinGame.png';
 import discoDashImg from '../../assets/arrowGame.jpg';
+import Scoreboard from '../RythmGame/Scoreboard';
 
 const GameSel = ({ setGameSel, onExit }) => {
   const game = [
@@ -13,6 +14,7 @@ const GameSel = ({ setGameSel, onExit }) => {
 
   return (
     <div className="game-selection-container">
+      <Scoreboard/>
       {game.map((game, idx) => (
         <div
           key={idx}
