@@ -12,7 +12,8 @@ const CoinGame = ({
   players = ["Mario", "Waluigi"],
   scores, 
   startPositions,
-  localPlayerName = "Mario"
+  localPlayerName = "Mario",
+  onScoreIncrement
 }) => {
   
   const processedPlayers = players.map((p) =>
@@ -33,7 +34,8 @@ const CoinGame = ({
   }, [numPlayers]);
 
   const handleCoinCollect = () => {
-    setLocalScore(prev => prev + 1);
+    //setLocalScore(prev => prev + 1);
+    onScoreIncrement(0, 1);
     console.log("Coin collected");
   };
 
@@ -53,7 +55,7 @@ const CoinGame = ({
 
   return (
     <div style={{ width: "100vw", height: "100vh", overflow: "hidden", position: "relative" }}>
-      <Scoreboard players={updatedPlayers} />
+      {/* <Scoreboard players={updatedPlayers} /> */}
 
       <Canvas shadows camera={{ position: [0, 0, 10], fov: 10 }}
         onCreated={({ camera }) => {

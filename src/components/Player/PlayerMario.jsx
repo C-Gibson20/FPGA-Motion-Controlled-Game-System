@@ -92,7 +92,7 @@ const PlayerMario = ({ username, isPlayerPlayer, initialPosition, playerRef, jum
         jumpTriggeredRef.current = true;
         isJumping.current = true;
         velocityY.current = jumpStrength;
-        setCurrentModel("MarioJump");
+        if (currentModel !== "MarioJump") setCurrentModel("MarioJump");
         playJumpSound();
       }
     } else {
