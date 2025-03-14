@@ -14,11 +14,9 @@ const GAMES = {
 };
 
 const RhythmGame = ({ gameSel, players = [], scores, onScoreIncrement, ws, onExit }) => {
-  // players is expected to be an array of names, e.g. ["Mario", "Waluigi"]
-  // const [scores, setScores] = useState(players.map(() => 0));
   const [data, setData] = useState([]);
-  // fpgaControls: object keyed by player number (1-indexed)
   const [fpgaControls, setFpgaControls] = useState({});
+  const [gameObjects, setGameObjects] = useState([]);
 
   useEffect(() => {
     axios.get('http://localhost:5001/scores')
@@ -36,26 +34,12 @@ const RhythmGame = ({ gameSel, players = [], scores, onScoreIncrement, ws, onExi
             // Convert the payload.data value into control booleans.
             const controls = { jump: false, left: false, right: false, still: false, click: false };
             switch (payload.data) {
-              case 'J':
-                controls.jump = true;
-                break;
-              case 'L':
-                controls.left = true;
-                break;
-              case 'R':
-                controls.right = true;
-                break;
-              case 'N':
-                controls.still = true;
-                break;
-              case 'B1':
-                controls.jump = true;
-                break;
-              case 'B2':
-                controls.click = true;
-                break;
-              default:
-                break;
+              case 'J': case 'B1' : controls.jump = true; break;
+              case 'L': controls.left = true; break;
+              case 'R': controls.right = true; break;
+              case 'N': controls.still = true; break;
+              case 'B2': controls.click = true; break;
+              default: break;
             }
             // Update fpgaControls for the given player (assumed 1-indexed)
             setFpgaControls(prev => ({
@@ -66,6 +50,10 @@ const RhythmGame = ({ gameSel, players = [], scores, onScoreIncrement, ws, onExi
           }
         } catch (err) {
           console.error("Error parsing message:", err);
+        }
+
+        if (payload.type === 'gameStateUpdate') {
+          setGameObjects(payload.objects || []);
         }
       };
       ws.addEventListener("message", messageHandler);
@@ -88,6 +76,7 @@ const RhythmGame = ({ gameSel, players = [], scores, onScoreIncrement, ws, onExi
         <SelectedGame
           players={players}
           scores={scores}
+          gameObjects={gameObjects}
           fpgaControls={fpgaControls}
           onScoreIncrement={onScoreIncrement}
           onCoinCollect={() => console.log("Coin collected callback")}
@@ -95,7 +84,6 @@ const RhythmGame = ({ gameSel, players = [], scores, onScoreIncrement, ws, onExi
           ws={ws}
         />
       ) : (
-        // If no game is selected, display an error or a fallback screen.
         <div style={{ color: "white", textAlign: "center", marginTop: "20px" }}>
           No game selected.
         </div>
