@@ -18,10 +18,11 @@ async def broadcast(data):
 
 
 def handle_init_message(data, game_manager, ws):
-    game_manager.config = {
-        "numPlayers": data.get("numPlayers", 1),
-        "names": data.get("names", [])
-    }
+    print(f"Received init message: {data}")  # Debugging: Check what data is received
+
+    # Using the GameManager's method to update the config
+    game_manager.update_config(data.get("numPlayers", 1), data.get("names", []))
+
     response = {"type": "config_ack"}
     return response
 
@@ -57,6 +58,7 @@ def handle_get_scores_message():
 
 async def handle_message(data, game_manager, ws):
     msg_type = data.get("type")
+    print(f"Received message type: {msg_type}, data: {data}")  # Debugging
 
     if msg_type == "init":
         return handle_init_message(data, game_manager, ws)

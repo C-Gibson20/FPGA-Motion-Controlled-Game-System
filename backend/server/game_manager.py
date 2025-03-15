@@ -16,6 +16,14 @@ class GameManager:
         self.player_scores = {}
         self.player_input_queue = []
 
+    def update_config(self, num_players, names):
+        """ Update the game configuration """
+        self.config = {
+            "numPlayers": num_players,
+            "names": names
+        }
+        print(f"Updated game configuration: {self.config}")
+
     def sync_score(self, pid, points=1):
         self.player_scores[pid] = self.player_scores.get(pid, 0) + points
         # Update persistent DB here (optional)
