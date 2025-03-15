@@ -11,7 +11,7 @@ import Scoreboard from "./pages/RythmGame/Scoreboard.jsx";
 
 // --- WebSocket Setup Function ---
 function setupWebSocket({ onStartGame, setPlayers }) {
-  const socket = new WebSocket("ws://localhost:8765");
+  const socket = new WebSocket("ws://13.61.26.147:8765");
 
   socket.onopen = () => {
     console.log("✅ WebSocket connected");
