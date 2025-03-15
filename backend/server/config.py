@@ -4,4 +4,4 @@ WS_PORT = 8765
 DB_FILE = "game_data.db"
 TICK_RATE = 1 / 60  # 60 FPS
 AWS_IP = "13.61.26.147"
-AWS_PORT = 15234
+TCP_PORT = 15234

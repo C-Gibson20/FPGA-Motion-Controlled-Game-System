@@ -2,7 +2,7 @@ import json
 import time
 from websockets.server import serve
 from db import get_scores
-from config import WS_PORT, AWS_IP
+from config import WS_PORT, AWS_PORT
 
 clients = set()
 
@@ -92,6 +92,6 @@ def setup_ws(game_manager):
 
 
 async def start_ws_server(game_manager):
-    async with serve(setup_ws(game_manager), AWS_IP, WS_PORT):
+    async with serve(setup_ws(game_manager), "0.0.0.0", WS_PORT):
         print(f"[WebSocket] Listening on port {WS_PORT}")
         await game_manager.game_loop()
