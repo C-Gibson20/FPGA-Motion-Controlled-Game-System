@@ -10,4 +10,4 @@ if __name__ == "__main__":
     init_db()
     threading.Thread(target=lambda: app.run(host="0.0.0.0", port=5000), daemon=True).start()
     game = GameManager()
-    asyncio.run(start_ws_server(game), start_tcp_server())
+    asyncio.run(asyncio.gather(start_ws_server(game), start_tcp_server()))
