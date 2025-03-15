@@ -8,7 +8,7 @@ from websocket_server import start_ws_server
 
 async def main():
     game = GameManager()
-    await asyncio.gather(start_ws_server(game), start_tcp_server())
+    await asyncio.gather(start_ws_server(game), start_tcp_server(game))
 
 if __name__ == "__main__":
     init_db()
