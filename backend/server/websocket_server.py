@@ -2,7 +2,7 @@ import json
 import time
 from websockets.server import serve
 from db import get_scores
-from config import WS_PORT, AWS_PORT
+from config import WS_PORT
 
 clients = set()
 
