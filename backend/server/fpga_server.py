@@ -3,6 +3,7 @@ import socket
 import json
 import time
 from config import TCP_PORT
+from websocket_server import broadcast
 
 # Global state for FPGA connections
 fpga_connections = {}  # Mapping: player_id -> connection (and address)
@@ -16,17 +17,6 @@ tcp_socket.bind(('0.0.0.0', TCP_PORT))
 tcp_socket.listen(5)
 tcp_socket.setblocking(False)
 
-# Function to broadcast messages to all WebSocket clients
-async def broadcast(data):
-    msg = json.dumps(data)
-    for ws in list(clients):
-        if not ws.closed:
-            try:
-                await ws.send(msg)
-            except Exception as e:
-                print(f"Error sending message: {e}")
-                clients.discard(ws)
-
 # Handle incoming FPGA (TCP) connections
 async def handle_tcp_connection():
     loop = asyncio.get_running_loop()
@@ -36,6 +26,10 @@ async def handle_tcp_connection():
             connection_socket, addr = await loop.sock_accept(tcp_socket)
             print(f"FPGA connection from: {addr}")
             connection_socket.setblocking(False)
+
+            # Debugging output to verify number of players and connections
+            print(f"Game configuration: {game_config}")
+            print(f"Current FPGA connections: {len(fpga_connections)} / {game_config['numPlayers']}")
 
             # Assign player ID and handle communication if game config is set
             if game_config and len(fpga_connections) < game_config["numPlayers"]:
@@ -68,6 +62,7 @@ async def handle_tcp_connection():
 
         except Exception as e:
             print(f"Error accepting FPGA connection: {e}")
+
 
 # Handle FPGA communication (data exchange)
 async def handle_fpga_client(conn, player_id):

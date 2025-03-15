@@ -1,4 +1,4 @@
-import { StrictMode, useEffect, useRef, useState } from "react";
+import { StrictMode, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import "./index.css";
 import "./pages/Menu/Menu.css";
@@ -16,14 +16,12 @@ function setupWebSocket({ onStartGame, setPlayers }) {
   socket.onopen = () => {
     console.log("✅ WebSocket connected");
 
-    const simulatedPlayers = ["Mario", "Waluigi"];
-    setPlayers(simulatedPlayers);
-
+    // Send the 'init' message to inform the server about the FPGA connection.
     socket.send(
       JSON.stringify({
         type: "init",
-        names: simulatedPlayers,
-        numPlayers: simulatedPlayers.length,
+        numPlayers: 1, // You can set the actual number of players based on the FPGA connections
+        names: ["FPGA Player"], // Use a placeholder name, it could be adjusted based on the FPGA connection
       })
     );
   };
@@ -35,6 +33,10 @@ function setupWebSocket({ onStartGame, setPlayers }) {
 
       if (data.type === "startGame") {
         onStartGame(data.mode);
+      } else if (data.type === "player_connected") {
+        // Handle player connected (you might get an update when the FPGA is recognized)
+        console.log(`Player connected: ${data.name}`);
+        setPlayers((prev) => [...prev, data.name]);
       }
     } catch (err) {
       console.error("❌ Error parsing WebSocket message:", err);
@@ -51,9 +53,9 @@ function setupWebSocket({ onStartGame, setPlayers }) {
 // --- Root Component ---
 function Root() {
   const [gameStarted, setGameStarted] = useState(false);
-  const [gameSel, setGameSel] = useState("GameSelect"); // Dev shortcut
-  const [players, setPlayers] = useState(["Mario", "Waluigi"]); // Dev shortcut
-  const [scores, setScores] = useState([0, 0]);
+  const [gameSel, setGameSel] = useState(null); // No dev shortcut: Start on the menu screen
+  const [players, setPlayers] = useState([]); // Empty until fetched from WebSocket
+  const [scores, setScores] = useState([]);
   const [wsInstance, setWsInstance] = useState(null);
 
   const handleStartGame = (mode) => {
@@ -102,7 +104,7 @@ function Root() {
 
   const handleExit = () => {
     setGameStarted(false);
-    setGameSel("GameSelect");
+    setGameSel(null); // Reset to show the menu page
   };
 
   const showScoreboard = (gameSel && !gameStarted) || gameStarted;
