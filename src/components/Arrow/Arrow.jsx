@@ -17,10 +17,14 @@ const Arrow = ({ type, position }) => {
     Button: <FiCircle />
   };
 
+  const style = {
+    transform: `translate(${position.x}px, ${position.y}px)`
+  };
+
   return (
     <div
       className={`arrow arrow-${type}`}
-      style={{transform: `translate(${position.x}px, ${position.y}px)`,}}
+      style={style}
     >
       <div className="arrow-icon">{iconMap[type]}</div>
     </div>

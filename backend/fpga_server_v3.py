@@ -1,29 +1,53 @@
-import asyncio
-import socket
-import json
-import websockets
-import time
-import sqlite3
-from flask import Flask, jsonify, request
-import random
-import uuid
+# modern_fpga_game_server.py
 
-# Configurations
+import asyncio
+import json
+import random
+import socket
+import sqlite3
+import time
+import uuid
+from flask import Flask, jsonify, request
+from websockets.server import serve, WebSocketServerProtocol
+
+# Configuration
 TCP_PORT = 12000
 WS_PORT = 8765
 DB_FILE = "game_data.db"
+TICK_RATE = 1 / 60  # 60 FPS
 
-# Flask API Setup
+# Flask app for score viewing / API
 app = Flask(__name__)
 
-# Global state
+# Global State
 clients = set()
-fpga_connections = {}
+game_mode = None
+game_start_time = None
+game_objects = []
+player_positions = {}   # { player_id: { x, y } }
+player_scores = {}      # { player_id: score }
 game_config = None
+player_input_queue = []  # List of dicts: { player, action, timestamp }
 
-#=================================================
-# Database functions
-#=================================================
+BEATMAP = [
+    {"time": 0, "type": "ArrowUp"},
+    {"time": 1500, "type": "ArrowLeft"},
+    {"time": 3000, "type": "ArrowUp"},
+    {"time": 4500, "type": "ArrowRight"},
+    {"time": 6000, "type": "Button"},
+    {"time": 12000, "type": "ArrowLeft"},
+    {"time": 13500, "type": "ArrowUp"},
+    {"time": 15000, "type": "ArrowRight"},
+    {"time": 16500, "type": "ArrowUp"},
+    {"time": 18000, "type": "ArrowLeft"},
+    {"time": 19500, "type": "ArrowUp"},
+    {"time": 20500, "type": "Button"},
+    {"time": 28000, "type": "ArrowUp"},
+    {"time": 30500, "type": "ArrowLeft"},
+    {"time": 32000, "type": "ArrowRight"}
+]
+
+# --------------------------- Database ----------------------------------
 
 def init_db():
     conn = sqlite3.connect(DB_FILE)
@@ -59,167 +83,25 @@ def get_scores():
     conn.close()
     return scores
 
-#=================================================
-# Flask routes
-#=================================================
+def sync_score(pid, points=1):
+    player_scores[pid] = player_scores.get(pid, 0) + points
+    if game_config and "names" in game_config and pid <= len(game_config["names"]):
+        username = game_config["names"][pid - 1]
+        update_score(username, points)
 
-@app.route('/scores', methods=['GET'])
-def fetch_scores():
+# --------------------------- Flask Routes ------------------------------
+
+@app.route("/scores")
+def scores_api():
     return jsonify({"scores": get_scores()})
 
-@app.route('/update_score', methods=['POST'])
-def api_update_score():
+@app.route("/update_score", methods=["POST"])
+def update_score_api():
     data = request.json
     update_score(data.get("username"), data.get("increment", 1))
     return jsonify({"message": "Score updated"})
 
-#=================================================
-# WebSocket handling
-#=================================================
-
-async def handle_ws(websocket):
-    global mode, game_start_time
-    clients.add(websocket)
-    print(f"WebSocket connected: {websocket.remote_address}")
-
-    try:
-        async for message in websocket:
-            try:
-                data = json.loads(message)
-            except json.JSONDecodeError:
-                print("Invalid JSON message:", message)
-                continue
-
-            message_type = data.get("type")
-
-            if message_type == "init":
-                await handle_init_message(data)
-            elif message_type == "game_selection":
-                mode = data.get("mode")
-                game_start_time = time.time()
-                await broadcast({
-                    "type": "startGame",
-                    "mode": mode,
-                    "startAt": game_start_time  # Delay start time for sync
-                })
-            elif message_type == "player_position":
-                player = data.get("player")
-                pos = data.get("position", {})
-                if player:
-                    player_positions[player] = pos
-
-            elif message_type == "get_scores":
-                await websocket.send(json.dumps({"type": "score_data", "scores": get_scores()}))
-            else:
-                print("Unknown message type:", data)
-
-    except websockets.exceptions.ConnectionClosed:
-        print(f"WebSocket disconnected: {websocket.remote_address}")
-    finally:
-        clients.remove(websocket) 
-
-async def handle_init_message(ws, data):
-    global game_config
-    game_config = {"numPlayers": data.get("numPlayers", 1), "names": data.get("names", [])}
-    print("Game configuration received:", game_config)
-
-    await ws.send(json.dumps({
-        "type": "config_ack",
-        "message": "Configuration received. Waiting for FPGA connections...",
-        "expectedPlayers": game_config["numPlayers"]
-    }))
-
-#=================================================
-# TCP handling
-#=================================================
-async def accept_tcp_connection(server_socket):
-    loop = asyncio.get_running_loop()
-    while True:
-        try:
-            conn, addr = await loop.sock_accept(server_socket)
-            print(f"TCP connection from FPGA: {addr}")
-            conn.setblocking(False)
-            await register_fpga_connection(conn, addr)
-        except Exception as e:
-            print("Error accepting TCP connection:", e)
-
-async def register_fpga_connection(conn, addr):
-    global game_config
-
-    if not game_config or len(fpga_connections) >= game_config["numPlayers"]:
-        conn.close()
-        return
-    
-    player_id = len(fpga_connections) + 1
-    player_name = game_config["names"][player_id - 1] if player_id - 1 < len(game_config["names"]) else f"Player {player_id}"
-    fpga_connections[player_id] = {"conn": conn, "addr": str(addr)}
-
-    update_score(player_name, 0)
-    await asyncio.get_running_loop().sock_sendall(conn, b"S")
-
-    await broadcast({
-        "type": "player_connected",
-        "player": player_id,
-        "name": player_name,
-        "address": str(addr)
-    })
-
-    asyncio.create_task(handle_fpga_client(conn, player_id, player_name))
-
-async def handle_fpga_client(conn, player_id, username):
-    loop = asyncio.get_running_loop()
-    try:
-        while True:
-            data = await loop.sock_recv(conn, 1024)
-            if not data:
-                break
-            message = data.decode().strip()
-            update_score(username, 1)
-            
-            await broadcast({
-                "type": "data",
-                "player": player_id,
-                "data": message
-            })
-    except Exception as e:
-        print(f"Error handling FPGA for player {player_id}: {e}")
-    finally:
-        conn.close()
-        await broadcast({
-            "type": "player_disconnected",
-            "player": player_id
-        })
-
-#=================================================
-# Game objects
-#=================================================
-
-clients = set()
-mode = None
-game_start_time = None
-game_objects = []
-TICK_RATE = 1 / 30
-player_positions = {}  # { player_id: { x: float, y: float } }
-player_scores = {}     # { player_id: int }
-
-
-BEATMAP = [
-    {"time": 0, "type": " "},
-    {"time": 1500, "type": "ArrowLeft"},
-    {"time": 3000, "type": "ArrowUp"},
-    {"time": 4500, "type": "ArrowRight"},
-    {"time": 6000, "type": " "},
-    {"time": 12000, "type": "ArrowLeft"},
-    {"time": 13500, "type": "ArrowUp"},
-    {"time": 15000, "type": "ArrowRight"},
-    {"time": 16500, "type": "ArrowUp"},
-    {"time": 18000, "type": "ArrowLeft"},
-    {"time": 19500, "type": "ArrowUp"},
-    {"time": 20000, "type": " "},
-    {"time": 28000, "type": "ArrowUp"},
-    {"time": 30500, "type": "ArrowLeft"},
-    {"time": 32000, "type": "ArrowRight"}
-]
+# --------------------------- Game Logic -------------------------------
 
 def update_coin_game(objects, now):
     updated = []
@@ -227,136 +109,279 @@ def update_coin_game(objects, now):
 
     for coin in objects:
         if now - coin["spawnedAt"] > 5:
-            continue  # coin expired
+            continue
 
-        # Simulate falling
-        dy = (now - coin["spawnedAt"]) * 2
-        new_y = coin["y"] - dy
-
+        elapsed = now - coin["spawnedAt"]
+        new_y = coin["y"] - 0.5 * coin.get("gravity") * elapsed
         coin_pos = (coin["x"], new_y)
 
-        # Collision check with all players
-        for pid, ppos in player_positions.items():
-            if distance(coin_pos, (ppos["x"], ppos["y"])) < 0.3:
-                player_scores[pid] = player_scores.get(pid, 0) + 1
-                collected_ids.add(coin["id"])
-                break
+        collected = False
+        for pid, pos in player_positions.items():
+            if distance(coin_pos, (pos["x"], pos["y"])) < 0.3:
+                sync_score(pid)
+                collected = True
+                break  
 
-        if coin["id"] not in collected_ids:
+        # Remove if collected or off-screen
+        if not collected and coin_pos[1] < -0.65:
+            continue  
+
+        if not collected:
             updated.append({**coin, "y": new_y})
 
-    # Spawn new coins
-    if len(updated) < 5:
-        new_coin = {
-            "id": str(uuid4()),
-            "type": "coin",
-            "x": random.uniform(-4, 4),
-            "y": 3,
-            "spawnedAt": now
-        }
-        updated.append(new_coin)
-
-    return updated
-
-def distance(p1, p2):
-    return ((p1[0]-p2[0])**2 + (p1[1]-p2[1])**2) ** 0.5
-
-
-def update_arrow_game(now):
-    # This doesn't need to keep old arrows, just spawn new ones based on beatmap
-    arrows = []
-    elapsed = (now - game_start_time) * 1000  # in ms
-    window = 150  # time window to spawn an arrow
-
-    for beat in BEATMAP:
-        if abs(beat["time"] - elapsed) < window:
-            arrows.append({
-                "id": f"arrow-{beat['time']}",
-                "type": beat["type"],
-                "x": 1280,
-                "y": 0,
-                "spawnedAt": now
-            })
-
-    return arrows
-
-def update_spikeball_game(objects, now):
-    updated = []
-    # Simulate movement (leftward) at 4 units/sec
-    for spike in objects:
-        dx = (now - spike["spawnedAt"]) * 4
-        new_x = spike["x"] - dx
-        if new_x > -6:
-            updated.append({**spike, "x": new_x})
-
-    if len(updated) < 3:
+    # Spawn new coins to maintain count
+    while len(updated) < 5:
         updated.append({
             "id": str(uuid.uuid4()),
-            "type": "spike",
-            "x": 5,
-            "y": -1.5,  # floor level
+            "type": "coin",
+            "x": random.uniform(-1.5, 1.5),
+            "y": 1,
+            "gravity": 0.01 + random.random() * 0.01,
             "spawnedAt": now
         })
 
     return updated
 
-async def game_loop():
-    global game_objects, game_start_time
+def update_arrow_game(objects, now):
+    global player_input_queue
 
+    elapsed = (now - game_start_time) * 1000  
+    window = 150
+    spawn_offset = 1280
+    move_speed = 150
+    arrow_map = {arrow["id"]: arrow for arrow in objects if arrow["type"].startswith("Arrow") or arrow["type"] == "Button"}
+
+    beatmap_duration = BEATMAP[-1]["time"]
+    loop_count = int(elapsed // beatmap_duration)
+
+    for loop in [loop_count, loop_count + 1]:
+        loop_base_time = loop * beatmap_duration
+        for beat in BEATMAP:
+            beat_time_global = loop_base_time + beat["time"]
+            if abs(beat_time_global - elapsed) < window:
+                unique_id = f"arrow-{loop}-{beat['time']}"
+                if unique_id not in arrow_map:  # Prevent duplicates
+                    arrow_map[unique_id] = {
+                        "id": unique_id,
+                        "type": beat["type"],
+                        "x": spawn_offset,
+                        "y": 0,
+                        "spawnedAt": now,
+                        "time": beat_time_global,
+                        "hitBy": [],
+                        "missedBy": []
+                    }
+
+    for input_event in player_input_queue:
+        player = input_event["player"]
+        action = input_event["action"]
+        timestamp = input_event["timestamp"]
+
+        best_arrow = None
+        best_dist = float("inf")
+
+        for arrow in arrow_map.values():
+            if arrow["type"] != action:
+                continue
+            if player in arrow["hitBy"] or player in arrow["missedBy"]:
+                continue
+
+            arrow_elapsed = timestamp - arrow["spawnedAt"]
+            arrow_x = spawn_offset - move_speed * arrow_elapsed
+            dist = abs(arrow_x - 80)  # Target hit zone
+
+            if dist < 50 and dist < best_dist:
+                best_arrow = arrow
+                best_dist = dist
+
+        if best_arrow:
+            if player not in best_arrow["hitBy"]:
+                best_arrow["hitBy"].append(player)
+
+            if best_dist <= 20:
+                feedback = "Perfect"
+                points = 2
+            else:
+                feedback = "Good"
+                points = 1
+        else:
+            feedback = "Miss"
+            points = -1
+
+        sync_score(player, points)
+        asyncio.create_task(broadcast({
+            "type": "score_feedback",
+            "player": player,
+            "result": feedback,
+            "points": points
+        }))
+
+    player_input_queue.clear()
+
+    final_arrows = []
+    for arrow in arrow_map.values():
+        elapsed_time = now - arrow["spawnedAt"]
+        arrow["x"] = spawn_offset - move_speed * elapsed_time
+
+        if arrow["x"] > -50:  
+            final_arrows.append(arrow)
+        else:
+            for pid in range(1, game_config["numPlayers"] + 1):
+                if pid not in arrow["hitBy"] and pid not in arrow["missedBy"]:
+                    arrow["missedBy"].append(pid)
+                    sync_score(pid, -1)
+                    asyncio.create_task(broadcast({
+                        "type": "score_feedback",
+                        "player": pid,
+                        "result": "Miss",
+                        "points": -1
+                    }))
+
+    return final_arrows  
+
+def update_spikeball_game(objects, now):
+    updated = []
+
+    for spike in objects:
+        elapsed = now - spike["spawnedAt"]
+        dx = spike["speed"] * elapsed
+        new_x = spike["x"] - dx
+        spike_pos = (new_x, spike["y"])
+
+        scored_hits = set(spike.get("scoredHits", []))     
+        scored_dodges = set(spike.get("scoredDodges", [])) 
+
+        for pid, pos in player_positions.items():
+            player_pos = (pos["x"], pos["y"])
+
+            if pid not in scored_hits and distance(spike_pos, player_pos) < 0.2:
+                sync_score(pid, -1)  
+                scored_hits.add(pid)
+
+            elif new_x < -2.5 and pid not in scored_hits and pid not in scored_dodges:
+                sync_score(pid, 1) 
+                scored_dodges.add(pid)
+
+        if new_x > -2.8:
+            updated.append({
+                **spike,
+                "x": new_x,
+                "scoredHits": list(scored_hits),
+                "scoredDodges": list(scored_dodges)
+            })
+
+    if len(updated) < 1:
+        updated.append({
+            "id": str(uuid.uuid4()),
+            "type": "spike",
+            "x": 2.5,
+            "y": -0.25,
+            "speed": 0.005 + random.random() * 0.01,
+            "spawnedAt": now,
+            "scoredHits": [],
+            "scoredDodges": []
+        })
+
+    return updated
+
+def distance(p1, p2):
+    return ((p1[0] - p2[0])**2 + (p1[1] - p2[1])**2)**0.5
+
+# --------------------------- Game Loop --------------------------------
+
+async def game_loop():
+    global game_objects
     while True:
         await asyncio.sleep(TICK_RATE)
-
-        if not mode or not game_start_time:
-            continue  # Wait for a game to start
+        if not game_mode or not game_start_time:
+            continue
 
         now = time.time()
 
-        if mode == "Coin Cascade":
-            game_objects = update_coin_game(game_objects, now)
-
-        elif mode == "Disco Dash":
-            game_objects = update_arrow_game(now)
-
-        elif mode == "Bullet Barrage":
-            game_objects = update_spikeball_game(game_objects, now)
+        if game_mode == "Coin Cascade":
+            game_objects[:] = update_coin_game(game_objects, now)
+        elif game_mode == "Disco Dash":
+            game_objects[:] = update_arrow_game(game_objects, now)
+        elif game_mode == "Bullet Barrage":
+            game_objects[:] = update_spikeball_game(game_objects, now)
 
         await broadcast({
             "type": "gameStateUpdate",
-            "mode": mode,
+            "mode": game_mode,
             "objects": game_objects,
             "scores": player_scores,
             "timestamp": now
         })
 
-#=================================================
-# Broadcast function
-#=================================================
+# --------------------------- WebSocket Server --------------------------
 
 async def broadcast(data):
-    if clients:
-        json_msg = json.dumps(data)
-        await asyncio.gather(*[client.send(json_msg) for client in clients if not client.closed])
+    json_msg = json.dumps(data)
+    for ws in list(clients):
+        try:
+            if not ws.closed:
+                await ws.send(json_msg)
+        except Exception as e:
+            print(f"[Broadcast Error] {e}")
+            clients.discard(ws)
 
-#=================================================
-# Main function
-#=================================================
+async def handle_ws(ws: WebSocketServerProtocol):
+    global game_mode, game_start_time, game_config
+    clients.add(ws)
+    print(f"WebSocket connected: {ws.remote_address}")
+    try:
+        async for message in ws:
+            data = json.loads(message)
+            msg_type = data.get("type")
 
-async def start_async_services():
+            if msg_type == "init":
+                game_config = {"numPlayers": data.get("numPlayers", 1), "names": data.get("names", [])}
+                await ws.send(json.dumps({"type": "config_ack"}))
+
+            elif msg_type == "game_selection":
+                game_mode = data.get("mode")
+                game_start_time = time.time()
+                game_objects.clear()
+                await broadcast({
+                    "type": "startGame",
+                    "mode": game_mode,
+                    "startAt": game_start_time
+                })
+
+            elif msg_type == "player_position":
+                player = data.get("player")
+                pos = data.get("position", {})
+                if player:
+                    player_positions[player] = pos
+
+            elif msg_type == "player_input":
+                player = data.get("player")
+                action = data.get("action")
+                timestamp = data.get("timestamp")
+                player_input_queue.append({
+                    "player": player,
+                    "action": action,
+                    "timestamp": timestamp
+                })
+
+            elif msg_type == "get_scores":
+                await ws.send(json.dumps({"type": "score_data", "scores": get_scores()}))
+
+    except Exception as e:
+        print(f"[WS Error] {e}")
+    finally:
+        clients.discard(ws)
+        print(f"WebSocket disconnected: {ws.remote_address}")
+
+async def start_server():
     init_db()
-    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    server_socket.bind(('0.0.0.0', TCP_PORT))
-    server_socket.listen(5)
-    server_socket.setblocking(False)
+    async with serve(handle_ws, "0.0.0.0", WS_PORT):
+        print(f"WebSocket server running on ws://0.0.0.0:{WS_PORT}")
+        await game_loop()
 
-    ws_server = await websockets.serve(handle_ws, "0.0.0.0", WS_PORT)
-    print("WebSocket server running on port", WS_PORT)
-
-    # Start the game loop here
-    # asyncio.create_task(game_loop())
-
-    await asyncio.gather(accept_tcp_connection(server_socket), ws_server.wait_closed(), game_loop())
+# --------------------------- Start Flask & Async -----------------------
 
 if __name__ == "__main__":
-    asyncio.create_task(start_async_services())
-    app.run(host='0.0.0.0', port=5000)
+    import threading
+    threading.Thread(target=lambda: app.run(host="0.0.0.0", port=5000), daemon=True).start()
+    asyncio.run(start_server())

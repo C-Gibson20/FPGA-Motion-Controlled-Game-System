@@ -1,77 +1,135 @@
-import React, { useState, useEffect, useRef } from 'react';
-import axios from 'axios';
+import React, { useState, useEffect, useRef } from "react";
+import axios from "axios";
 import SpikeBallGame from "../../components/SpikeBall/SpikeBallGame.jsx";
 import CoinGame from "../../components/Coin/CoinGame.jsx";
 import ArrowGame from "../../components/Arrow/ArrowGame.jsx";
-import Scoreboard from './Scoreboard.jsx';
+import Scoreboard from "./Scoreboard.jsx";
 import "./RhythmGame.css";
 
-// The keys in GAMES must exactly match the names set in GameSel.
+// Game map: keys must match gameSel
 const GAMES = {
-  'Bullet Barrage': SpikeBallGame,
-  'Coin Cascade': CoinGame,
-  'Disco Dash': ArrowGame
+  "Bullet Barrage": SpikeBallGame,
+  "Coin Cascade": CoinGame,
+  "Disco Dash": ArrowGame,
 };
 
+// --- Helper: Parse FPGA Control Data ---
+const parseFpgaControl = (data) => {
+  const controls = {
+    jump: false,
+    left: false,
+    right: false,
+    still: false,
+    click: false,
+  };
+
+  switch (data) {
+    case "J":
+    case "B1":
+      controls.jump = true;
+      break;
+    case "L":
+      controls.left = true;
+      break;
+    case "R":
+      controls.right = true;
+      break;
+    case "N":
+      controls.still = true;
+      break;
+    case "B2":
+      controls.click = true;
+      break;
+    default:
+      break;
+  }
+
+  return controls;
+};
+
+// --- Custom Hook: Handle WebSocket Logic ---
+const useWebSocket = ({ ws, players, scores, onScoreIncrement, setFpgaControls, setGameObjects }) => {
+  const latestScoresRef = useRef(scores);
+
+  useEffect(() => {
+    latestScoresRef.current = scores;
+  }, [scores]);
+
+  useEffect(() => {
+    if (!ws) return;
+
+    const handleMessage = (event) => {
+      console.log("RhythmGame received message:", event.data);
+
+      let payload;
+      try {
+        payload = JSON.parse(event.data);
+      } catch (err) {
+        console.error("Error parsing message:", err);
+        return;
+      }
+
+      if (payload.type === "data") {
+        const controls = parseFpgaControl(payload.data);
+        setFpgaControls((prev) => ({
+          ...prev,
+          [payload.player]: controls,
+        }));
+      }
+
+      if (payload.type === "gameStateUpdate") {
+        setGameObjects(payload.objects || []);
+
+        // Update scores
+        if (payload.scores && typeof onScoreIncrement === "function") {
+          const serverScores = payload.scores;
+          players.forEach((_, index) => {
+            const playerId = index + 1;
+            const newScore = serverScores[playerId] || 0;
+            const localScore = latestScoresRef.current[index] || 0;
+            const delta = newScore - localScore;
+
+            if (delta !== 0) {
+              console.log(`Score delta for P${index + 1}: ${delta}`);
+              onScoreIncrement(index, delta);
+            }
+          });
+        }
+      }
+    };
+
+    ws.addEventListener("message", handleMessage);
+    return () => ws.removeEventListener("message", handleMessage);
+  }, [ws, players, onScoreIncrement, setFpgaControls, setGameObjects]);
+};
+
+// --- Main Component ---
 const RhythmGame = ({ gameSel, players = [], scores, onScoreIncrement, ws, onExit }) => {
-  const [data, setData] = useState([]);
   const [fpgaControls, setFpgaControls] = useState({});
   const [gameObjects, setGameObjects] = useState([]);
+  const [data, setData] = useState([]);
 
-  useEffect(() => {
-    axios.get('http://localhost:5001/scores')
-      .then(response => setData(response.data))
-      .catch(error => console.error('Error fetching data:', error));
-  }, []);
+  // Fetch score data on mount (optional – not used in render)
+  // useEffect(() => {
+  //   axios
+  //     .get("http://localhost:5001/scores")
+  //     .then((res) => setData(res.data))
+  //     .catch((err) => console.error("Error fetching data:", err));
+  // }, []);
 
-  useEffect(() => {
-    if (ws) {
-      const messageHandler = (event) => {
-        console.log("RhythmGame received message:", event.data);
-        try {
-          const payload = JSON.parse(event.data);
-          if (payload.type === 'data') {             
-            // Convert the payload.data value into control booleans.
-            const controls = { jump: false, left: false, right: false, still: false, click: false };
-            switch (payload.data) {
-              case 'J': case 'B1' : controls.jump = true; break;
-              case 'L': controls.left = true; break;
-              case 'R': controls.right = true; break;
-              case 'N': controls.still = true; break;
-              case 'B2': controls.click = true; break;
-              default: break;
-            }
-            // Update fpgaControls for the given player (assumed 1-indexed)
-            setFpgaControls(prev => ({
-              ...prev,
-              [payload.player]: controls
-            }));
-          
-          }
-        } catch (err) {
-          console.error("Error parsing message:", err);
-        }
-
-        if (payload.type === 'gameStateUpdate') {
-          setGameObjects(payload.objects || []);
-        }
-      };
-      ws.addEventListener("message", messageHandler);
-      return () => ws.removeEventListener("message", messageHandler);
-    }
-  }, [ws]);
+  useWebSocket({
+    ws,
+    players,
+    scores,
+    onScoreIncrement,
+    setFpgaControls,
+    setGameObjects,
+  });
 
   const SelectedGame = GAMES[gameSel];
 
   return (
     <div className="game-container">
-      {/* Render one Scoreboard for both players */}
-      <Scoreboard players={players.map((name, index) => ({
-        username: name,
-        score: scores[index] || 0,
-        avatar: index === 0 ? "/images/mario.png" : "/images/waluigi.png",
-      }))} />
-      
       {SelectedGame ? (
         <SelectedGame
           players={players}
@@ -89,7 +147,9 @@ const RhythmGame = ({ gameSel, players = [], scores, onScoreIncrement, ws, onExi
         </div>
       )}
 
-      <button onClick={onExit} className="exit-button">✖</button>
+      <button onClick={onExit} className="exit-button">
+        ✖
+      </button>
     </div>
   );
 };

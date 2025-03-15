@@ -1,16 +1,17 @@
 import React, { useRef, useEffect, useState } from "react";
 import { useGLTF } from "@react-three/drei";
+import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 
-const MAX_PARTICLES = 100;
-const PARTICLE_LIFETIME = 1.5;
-
-const SpikeBall = ({
-  position = [1.5, -0.25, 0]
-}) => {
-  const { scene } = useGLTF("/models/BanzaiBIll.glb");
+const SpikeBall = ({ position = [1.5, -0.25, 0]  }) => {
+  const { scene } = useGLTF("/models/BanzaiBill.glb");
   const groupRef = useRef();
   const [clone, setClone] = useState(null);
+  const targetPosition = useRef(new THREE.Vector3(...position));
+
+  useEffect(() => {
+    targetPosition.current.set(...position);
+  }, [position]);
 
   useEffect(() => {
     if (scene) {
@@ -26,7 +27,12 @@ const SpikeBall = ({
       setClone(clonedScene);
     }
   }, [scene]);
-  
+
+  useFrame((state, delta) => {
+    if (groupRef.current) {
+      groupRef.current.position.lerp(targetPosition.current, 0.05); // adjust smoothing factor here
+    }
+  });
 
   if (!clone) return null;
 
@@ -42,7 +48,6 @@ const SpikeBall = ({
           self.layers.enable(2);
         }}
       />
-
       <primitive
         object={clone}
         position={[0, 0, 0]}

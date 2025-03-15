@@ -21,7 +21,7 @@ const GameSel = ({ setGameSel, onExit, scores, players }) => {
 
   return (
     <div className="game-selection-container">
-      <Scoreboard players={scoreboardData} />
+      {/* <Scoreboard players={scoreboardData} /> */}
       {games.map((game, idx) => (
         <div
           key={idx}

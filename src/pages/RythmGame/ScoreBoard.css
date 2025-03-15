@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Luckiest+Guy&display=swap');
+
 /* Leaderboard container */
 .scoreboard {
     position: fixed;
@@ -10,72 +12,73 @@
     z-index: 1000;
     min-width: 180px;
     max-width: 250px;
-}
-
-/* Leaderboard list */
-.scoreboard ul {
+  }
+  
+  /* Leaderboard list */
+  .scoreboard ul {
     list-style: none;
     padding: 0;
     margin: 0;
-}
-
-/* Individual leaderboard entry */
-.leaderboard-entry {
-    display: flex;
-    align-items: center;
-    position: relative; /* Needed for absolute positioning */
-    gap: 8px;
-    padding: 5px 10px;
-}
-
-/* Player container */
-.player-container {
+  }
+  
+  /* Individual leaderboard entry */
+  .leaderboard-entry {
     display: flex;
     align-items: center;
     position: relative;
-}
-
-/* Score box */
-.score-box {
+    gap: 8px;
+    padding: 5px 10px;
+  }
+  
+  /* Player container */
+  .player-container {
     display: flex;
     align-items: center;
-    background: rgba(183, 183, 183, 0.393); /* Slightly transparent */
+    position: relative;
+  }
+  
+  /* Score box */
+  .score-box {
+    display: flex;
+    align-items: center;
+    background: rgba(183, 183, 183, 0.393); 
     border-radius: 20px;
     padding: 10px 20px;
     height: 50px;
     min-width: 140px;
     position: relative;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
-}
-
-/* Player avatar */
-.player-avatar {
+  }
+  
+  /* Player avatar */
+  .player-avatar {
     width: 60px;
     height: 60px;
     background-size: cover;
     border-radius: 50%;
     position: absolute;
-    left: 25px; /* Position inside the grey box */
-    z-index: 2; /* Ensures it's on the first layer */
-}
-
-/* Player name (optional) */
-.player-name {
+    left: 25px; 
+    z-index: 2;
+  }
+  
+  /* Player name */
+  .player-name {
     font-size: 1rem;
-    font-weight: bold;
     color: white;
-    margin-left: 60px; /* Space for avatar */
+    margin-left: 70px; 
+    padding-right: 10px;
     position: relative;
-    z-index: 1; /* Keeps it inside the box */
-}
-
-/* Player score */
-.player-score {
+    z-index: 1; 
+    font-family: 'Luckiest Guy';
+  }
+  
+  /* Player score */
+  .player-score {
     font-size: 1.4rem;
-    font-weight: bold;
+    font-family: 'Luckiest Guy';
     color: #ffcc00;
     text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.3);
-    margin-left: auto; /* Pushes to the right */
     position: relative;
     z-index: 1;
-}
+  }
+  

@@ -1,54 +1,133 @@
-import React, { useRef } from "react";
-import { Canvas } from "@react-three/fiber";
-import Scoreboard from "../../pages/RythmGame/Scoreboard.jsx";
-import PlayerMario from "../../components/Player/PlayerMario.jsx";
-import PlayerWaluigi from "../../components/Player/PlayerWaluigi.jsx";
-import SpikeBallSpawner from "./SpikeBallSpawner.jsx";
+import React, { useEffect, useRef, useState } from "react";
+import { Canvas, useFrame } from "@react-three/fiber";
+import * as THREE from "three";
 import Background from "../../pages/RythmGame/Background.jsx";
+import PlayerMario from "../Player/PlayerMario.jsx";
+import PlayerWaluigi from "../Player/PlayerWaluigi.jsx";
+import SpikeBall from "./SpikeBall.jsx"; 
+
+const useKeyboardControls = () => {
+  const [state, setState] = useState({
+    left: false,
+    right: false,
+    jump: false,
+    still: true,
+  });
+
+  useEffect(() => {
+    const handle = (down) => (e) => {
+      setState((prev) => {
+        const next = { ...prev };
+        if (e.key === "ArrowLeft") next.left = down;
+        if (e.key === "ArrowRight") next.right = down;
+        if (e.key === " ") next.jump = down;
+        next.still = !next.left && !next.right && !next.jump;
+        return next;
+      });
+    };
+    window.addEventListener("keydown", handle(true));
+    window.addEventListener("keyup", handle(false));
+    return () => {
+      window.removeEventListener("keydown", handle(true));
+      window.removeEventListener("keyup", handle(false));
+    };
+  }, []);
+
+  return state;
+};
+
+const ReportPosition = ({ playerRef, playerIndex, ws }) => {
+  useFrame(() => {
+    if (playerRef?.current && ws?.readyState === WebSocket.OPEN) {
+      const pos = new THREE.Vector3();
+      playerRef.current.getWorldPosition(pos);
+      ws.send(
+        JSON.stringify({
+          type: "player_position",
+          player: playerIndex + 1,
+          position: { x: pos.x, y: pos.y },
+        })
+      );
+    }
+  });
+  return null;
+};
 
 const SpikeBallGame = ({
-  players = ["Mario", "Waluigi"],
   fpgaControls = {},
-  ws,
+  players = ["Mario", "Waluigi"],
   localPlayerName = "Mario",
-  scores,           // *** NEW: Global scores passed as a prop from the parent.
-  onScoreIncrement  // *** NEW: Global updater function passed as a prop.
+  ws,
+  gameObjects = [],
 }) => {
-  // Process players
-  const processedPlayers = players.map(p =>
+  const processedPlayers = players.map((p) =>
     typeof p === "string" ? { username: p } : p
   );
   const numPlayers = processedPlayers.length;
   if (numPlayers === 0) return <div>No players</div>;
 
-  // Create refs for controlled players.
-  const controlledPlayerRefs = useRef(players.map(() => React.createRef()));
-
-  // *** CHANGED: Instead of managing local scores, use onScoreIncrement to update global scores.
-  const handleTurn = (playerIndex, collisionStatus) => {
-    // For example, collisionStatus might be 1 for a successful hit and -1 for a miss.
-    if (onScoreIncrement) {
-      onScoreIncrement(playerIndex, collisionStatus); // Multiply by 10 points per collision status.
-    }
+  const keyboardState = useKeyboardControls();
+  const effectiveFpgaControls = {
+    ...fpgaControls,
+    1: keyboardState,
   };
 
-  // Build updated players for the Scoreboard using the global scores.
-  const updatedPlayers = processedPlayers.map((player, index) => {
-    const username = player.username;
+  const controlledPlayerRefs = useRef([]);
+  useEffect(() => {
+    controlledPlayerRefs.current = Array(numPlayers)
+      .fill(null)
+      .map((_, i) => controlledPlayerRefs.current[i] || React.createRef());
+  }, [numPlayers]);
+
+  const playerPositions = processedPlayers.map((player, index) => {
     const spacing = 10 / Math.max(1, numPlayers);
-    let xPos = -3 + index * spacing;
-    xPos = xPos * 0.3;
+    const xPos = (-3 + index * spacing) * 0.3;
     return {
-      username,
-      position: [xPos, -0.7, 0],
-      score: scores[index] || 0, // *** CHANGED: Use global score for each player.
-      avatar: index === 0 ? "/images/mario.png" : "/images/waluigi.png",
+      ...player,
+      position: [xPos, -0.35, 0],
     };
   });
 
+  const renderedPlayers = playerPositions.map((player, index) => {
+    const restrictToJumpOnly = (input = {}) => ({
+      jump: input.jump || false,
+      still: !input.jump,
+      left: false,
+      right: false,
+    });
+    
+    const PlayerComponent = index === 0 ? PlayerMario : PlayerWaluigi;
+    const isLocal = player.username === localPlayerName;
+    const control = restrictToJumpOnly(effectiveFpgaControls?.[index + 1]);
+
+    return (
+      <React.Fragment key={player.username}>
+        <PlayerComponent
+          username={player.username}
+          initialPosition={player.position}
+          isPlayerPlayer={isLocal}
+          jumpLow={control.jump}
+          disableLateralMovement={true}
+          playerRef={controlledPlayerRefs.current[index]}
+        />
+        <ReportPosition playerRef={controlledPlayerRefs.current[index]} playerIndex={index} ws={ws} />
+      </React.Fragment>
+    );
+  });
+
+  const renderedSpikeBalls = gameObjects
+    .filter((obj) => obj.type === "spike")
+    .map((spike) => (
+      <SpikeBall
+        key={spike.id}
+        position={[spike.x, spike.y, 0]}
+        speed={spike.speed || 4}
+        lifetime={spike.lifetime || 4000}
+      />
+    ));
+
   return (
     <div style={{ width: "100vw", height: "100vh", position: "relative" }}>
-      <Scoreboard players={updatedPlayers} />
       <Canvas
         shadows
         camera={{ position: [0, 0, 10], fov: 10 }}
@@ -57,53 +136,11 @@ const SpikeBallGame = ({
           camera.layers.enable(1);
           camera.layers.enable(2);
         }}
-        style={{ display: "block" }}
       >
         <Background imagePath="/images/Bowser.jpg" />
-        <directionalLight castShadow intensity={1} position={[5, 5, 5]} />
-
-        {updatedPlayers.map((player, index) => {
-          const isLocal = player.username === localPlayerName;
-          if (index === 0) {
-            return (
-              <PlayerMario
-                key={`mario-${index}`}
-                username={player.username}
-                initialPosition={[-0.65, -0.35, 0]}
-                isPlayerPlayer={isLocal} // Only the local player's component handles keyboard input.
-                jumpLow={fpgaControls?.[1]?.jump || false}
-                //left={fpgaControls?.[1]?.left || false}
-                //right={fpgaControls?.[1]?.right || false}
-                still={fpgaControls?.[1]?.still || false}
-                playerRef={controlledPlayerRefs.current[index]}
-                ws={ws}
-              />
-            );
-          } else if (index === 1) {
-            return (
-              <PlayerWaluigi
-                key={`waluigi-${index}`}
-                username={player.username}
-                initialPosition={[0.5, -0.35, 0]}
-                isPlayerPlayer={isLocal}
-                jumpLow={fpgaControls?.[2]?.jump || false}
-                //left={fpgaControls?.[2]?.left || false}
-                //right={fpgaControls?.[2]?.right || false}
-                still={fpgaControls?.[2]?.still || false}
-                playerRef={controlledPlayerRefs.current[index]}
-                ws={ws}
-              />
-            );
-          } else {
-            return null;
-          }
-        })}
-        <SpikeBallSpawner
-          playerRefs={controlledPlayerRefs.current}
-          onTurn={handleTurn} 
-          spawnInterval={2000}
-          lifetime={4000}
-        />
+        <directionalLight position={[10, 10, 5]} intensity={1} castShadow />
+        {renderedPlayers}
+        {renderedSpikeBalls}
       </Canvas>
     </div>
   );

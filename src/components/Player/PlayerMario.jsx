@@ -2,7 +2,7 @@ import React, { useRef, useEffect, useState } from "react";
 import { useGLTF, useAnimations } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
-import {playJumpSound} from "../Sounds/Sounds.jsx";
+import { playJumpSound } from "../Sounds/Sounds.jsx";
 
 const MODELS = {
   MarioIdle: { path: "/models/MarioIdle.glb", scale: 0.003 },
@@ -10,35 +10,33 @@ const MODELS = {
   MarioSideStep: { path: "/models/MarioLeftStep.glb", scale: 0.003 },
   MarioRightSideStep: { path: "/models/MarioRightStep.glb", scale: 0.003 },
   MarioBackFlip: { path: "/models/MarioBackFlip.glb", scale: 0.003 },
-  MarioVictory: { path: "/models/MarioVictory.glb", scale: 0.003 },
 };
 
-const PlayerMario = ({ username, isPlayerPlayer, initialPosition, playerRef, jumpLow, left, right, still, click }) => {
+const PlayerMario = ({
+  username,
+  isPlayerPlayer,
+  initialPosition,
+  playerRef,
+  jumpLow,
+  click,
+  disableLateralMovement = false,
+}) => {
   const [currentModel, setCurrentModel] = useState("MarioIdle");
   const groupRef = useRef();
   const activeAction = useRef(null);
-  // Ref to ensure we trigger jump only once.
   const jumpTriggeredRef = useRef(false);
   const clickTriggeredRef = useRef(false);
-
-  // Forward group ref for external access.
-  useEffect(() => {
-    if (playerRef) {
-      playerRef.current = groupRef.current;
-    }
-  }, [playerRef]);
 
   const modelData = MODELS[currentModel];
   const { scene } = useGLTF(modelData.path);
 
-  // Load animations from separate GLTF files.
+  // Load animations
   const { animations: idleAnimations } = useGLTF(MODELS.MarioIdle.path);
   const { animations: jumpAnimations } = useGLTF(MODELS.MarioJump.path);
   const { animations: clickAnimations } = useGLTF(MODELS.MarioBackFlip.path);
   const { animations: sideStepAnimations } = useGLTF(MODELS.MarioSideStep.path);
   const { animations: rightSideStepAnimations } = useGLTF(MODELS.MarioRightSideStep.path);
 
-  // Create animation actions.
   const { actions: idleActions } = useAnimations(idleAnimations, groupRef);
   const { actions: jumpActions } = useAnimations(jumpAnimations, groupRef);
   const { actions: clickActions } = useAnimations(clickAnimations, groupRef);
@@ -48,18 +46,23 @@ const PlayerMario = ({ username, isPlayerPlayer, initialPosition, playerRef, jum
   const velocityY = useRef(0);
   const speed = 0.005;
   const jumpStrength = 0.07;
-  const gravity = 0.9; // adjust as needed
+  const gravity = 0.9;
   const isJumping = useRef(false);
   const isBackFlipping = useRef(false);
   const keys = useRef({
-    ArrowUp: false,
-    ArrowDown: false,
     ArrowLeft: false,
     ArrowRight: false,
     Space: false,
   });
 
-  // Keyboard controls for local player.
+  // Expose ref externally
+  useEffect(() => {
+    if (playerRef) {
+      playerRef.current = groupRef.current;
+    }
+  }, [playerRef]);
+
+  // Local keyboard controls
   useEffect(() => {
     if (!isPlayerPlayer) return;
 
@@ -85,53 +88,35 @@ const PlayerMario = ({ username, isPlayerPlayer, initialPosition, playerRef, jum
     };
   }, [isPlayerPlayer]);
 
+  // Main animation and movement logic
   useFrame((_, delta) => {
     if (!groupRef.current) return;
     let didMove = false;
 
-    // --- FPGA Controls ---
-    if (jumpLow) {
-      // Only trigger jump once when jumpLow becomes true.
-      if (!jumpTriggeredRef.current && !isJumping.current) {
-        jumpTriggeredRef.current = true;
-        isJumping.current = true;
-        velocityY.current = jumpStrength;
-        if (currentModel !== "MarioJump") setCurrentModel("MarioJump");
-        playJumpSound();
-      }
-    } else {
-      // Reset our trigger when jumpLow is false.
+    // FPGA-based jump
+    if (jumpLow && !jumpTriggeredRef.current && !isJumping.current) {
+      jumpTriggeredRef.current = true;
+      isJumping.current = true;
+      velocityY.current = jumpStrength;
+      setCurrentModel("MarioJump");
+      playJumpSound();
+    } else if (!jumpLow) {
       jumpTriggeredRef.current = false;
     }
-    if (click) {
-      // Only trigger jump once when click becomes true.
-      if (!clickTriggeredRef.current && !isBackFlipping.current) {
-        clickTriggeredRef.current = true;
-        isBackFlipping.current = true;
-        velocityY.current = jumpStrength;
-        if (currentModel !== "MarioBackFlip") setCurrentModel("MarioBackFlip");
-        playJumpSound();
-      }
-    } else {
-      // Reset our trigger when jumpLow is false.
+
+    // FPGA-based click (backflip)
+    if (click && !clickTriggeredRef.current && !isBackFlipping.current) {
+      clickTriggeredRef.current = true;
+      isBackFlipping.current = true;
+      velocityY.current = jumpStrength;
+      setCurrentModel("MarioBackFlip");
+      playJumpSound();
+    } else if (!click) {
       clickTriggeredRef.current = false;
     }
-    if (left) {
-      groupRef.current.position.x -= speed;
-      if (currentModel !== "MarioSideStep") setCurrentModel("MarioSideStep");
-      didMove = true;
-    }
-    if (right) {
-      groupRef.current.position.x += speed;
-      if (currentModel !== "MarioRightSideStep") setCurrentModel("MarioRightSideStep");
-      didMove = true;
-    }
-    if (still && !didMove && !isJumping.current && !isBackFlipping.current && currentModel !== "MarioIdle") {
-      setCurrentModel("MarioIdle");
-    }
 
-    // --- Keyboard Controls (for local player) ---
-    if (isPlayerPlayer) {
+    // Local movement (only if allowed)
+    if (isPlayerPlayer && !disableLateralMovement) {
       if (keys.current.ArrowLeft) {
         groupRef.current.position.x -= speed;
         if (currentModel !== "MarioSideStep") setCurrentModel("MarioSideStep");
@@ -144,7 +129,12 @@ const PlayerMario = ({ username, isPlayerPlayer, initialPosition, playerRef, jum
       }
     }
 
-    // --- Jumping Motion ---
+    // Idle fallback
+    if (!didMove && !isJumping.current && !isBackFlipping.current && currentModel !== "MarioIdle") {
+      setCurrentModel("MarioIdle");
+    }
+
+    // Jump arc motion
     if (isJumping.current) {
       groupRef.current.position.y += velocityY.current;
       velocityY.current -= 0.3 * delta * gravity;
@@ -157,15 +147,16 @@ const PlayerMario = ({ username, isPlayerPlayer, initialPosition, playerRef, jum
     }
   });
 
+  // Handle animation transitions
   useEffect(() => {
-    // Fade out previous animation.
     if (activeAction.current) {
       activeAction.current.fadeOut(0.2);
     }
+
     let action;
     if (currentModel === "MarioIdle") {
       action = idleActions["mixamo.com"] || Object.values(idleActions)[0];
-      if (action) action.setLoop(THREE.LoopRepeat, Infinity);
+      action?.setLoop(THREE.LoopRepeat, Infinity);
     } else if (currentModel === "MarioJump") {
       action = jumpActions["mixamo.com"] || Object.values(jumpActions)[0];
       if (action) {
@@ -178,22 +169,20 @@ const PlayerMario = ({ username, isPlayerPlayer, initialPosition, playerRef, jum
         action.setLoop(THREE.LoopOnce, 1);
         action.clampWhenFinished = true;
         action.reset().fadeIn(0.2).play();
-    
-        // Use the animation clip's duration to schedule the reset.
-        const clipDuration = action.getClip().duration;
+        const duration = action.getClip().duration;
         setTimeout(() => {
           isBackFlipping.current = false;
-          setCurrentModel("MarioIdle"); // Reset to idle so new clicks trigger backflip
-        }, clipDuration * 1000);
+          setCurrentModel("MarioIdle");
+        }, duration * 1000);
       }
-    }
-     else if (currentModel === "MarioSideStep") {
+    } else if (currentModel === "MarioSideStep") {
       action = sideStepActions["mixamo.com"] || Object.values(sideStepActions)[0];
-      if (action) action.setLoop(THREE.LoopRepeat, Infinity);
+      action?.setLoop(THREE.LoopRepeat, Infinity);
     } else if (currentModel === "MarioRightSideStep") {
       action = rightSideStepActions["mixamo.com"] || Object.values(rightSideStepActions)[0];
-      if (action) action.setLoop(THREE.LoopRepeat, Infinity);
+      action?.setLoop(THREE.LoopRepeat, Infinity);
     }
+
     if (action) {
       action.reset().fadeIn(0.2).play();
       activeAction.current = action;
@@ -210,7 +199,7 @@ const PlayerMario = ({ username, isPlayerPlayer, initialPosition, playerRef, jum
           self.layers.enable(1);
         }}
       />
-      <primitive object={scene} scale={MODELS[currentModel].scale} />
+      <primitive object={scene} scale={modelData.scale} />
     </group>
   );
 };
