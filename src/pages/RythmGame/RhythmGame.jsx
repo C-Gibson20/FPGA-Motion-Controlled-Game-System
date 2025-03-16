@@ -47,7 +47,6 @@ const parseFpgaControl = (data) => {
   return controls;
 };
 
-// --- Custom Hook: Handle WebSocket Logic ---
 const useWebSocket = ({
   ws,
   players,
@@ -87,7 +86,6 @@ const useWebSocket = ({
       if (payload.type === "gameStart" || payload.type === "gameStateUpdate") {
         setGameObjects(payload.objects || []);
         
-        // If it's a gameStateUpdate, update scores as well
         if (payload.type === "gameStateUpdate" && payload.scores && typeof onScoreIncrement === "function") {
           const serverScores = payload.scores;
           players.forEach((_, index) => {
@@ -95,6 +93,8 @@ const useWebSocket = ({
             const newScore = serverScores[playerId] || 0;
             const localScore = latestScoresRef.current[index] || 0;
             const delta = newScore - localScore;
+
+            console.log(`Player ${playerId} score: ${newScore} (local: ${localScore})`);
 
             if (delta !== 0) {
               console.log(`Score delta for P${index + 1}: ${delta}`);
@@ -110,7 +110,6 @@ const useWebSocket = ({
   }, [ws, players, onScoreIncrement, setFpgaControls, setGameObjects]);
 };
 
-// --- Main Component ---
 const RhythmGame = ({ gameSel, players = [], scores, onScoreIncrement, ws, onExit }) => {
   const [fpgaControls, setFpgaControls] = useState({});
   const [gameObjects, setGameObjects] = useState([]);
@@ -119,12 +118,11 @@ const RhythmGame = ({ gameSel, players = [], scores, onScoreIncrement, ws, onExi
     ws,
     players,
     scores,
-    onScoreIncrement: onScoreIncrement || (() => {}),
+    onScoreIncrement,
     setFpgaControls,
     setGameObjects,
   });
 
-  // Ensure that `gameSel` is valid before attempting to load the game
   const SelectedGame = GAMES[gameSel];
 
   return (
@@ -136,7 +134,6 @@ const RhythmGame = ({ gameSel, players = [], scores, onScoreIncrement, ws, onExi
           gameObjects={gameObjects}
           fpgaControls={fpgaControls}
           onScoreIncrement={onScoreIncrement}
-          onCoinCollect={() => console.log("Coin collected callback")}
           localPlayerName={players[0]}
           ws={ws}
         />

@@ -1,46 +1,27 @@
-import React, { useEffect, useRef, useState } from "react";
-import { Canvas, useFrame } from "@react-three/fiber";
+import React, { useEffect, useRef } from "react";
+import { Canvas } from "@react-three/fiber";
 import * as THREE from "three";
 import Background from "../../pages/RythmGame/Background.jsx";
 import PlayerMario from "../Player/PlayerMario.jsx";
 import PlayerWaluigi from "../Player/PlayerWaluigi.jsx";
 import Coin from "./Coin.jsx";
 
-const useKeyboardControls = () => {
-  const [state, setState] = useState({ left: false, right: false, jump: false, still: true });
-  useEffect(() => {
-    const handle = (down) => (e) => {
-      setState((prev) => {
-        const next = { ...prev };
-        if (e.key === "ArrowLeft") next.left = down;
-        if (e.key === "ArrowRight") next.right = down;
-        if (e.key === " ") next.jump = down;
-        next.still = !next.left && !next.right && !next.jump;
-        return next;
-      });
-    };
-    window.addEventListener("keydown", handle(true));
-    window.addEventListener("keyup", handle(false));
-    return () => {
-      window.removeEventListener("keydown", handle(true));
-      window.removeEventListener("keyup", handle(false));
-    };
-  }, []);
-  return state;
-};
-
 const ReportPosition = ({ playerRef, playerIndex, ws }) => {
-  useFrame(() => {
-    if (playerRef?.current && ws?.readyState === WebSocket.OPEN) {
-      const pos = new THREE.Vector3();
-      playerRef.current.getWorldPosition(pos);
-      ws.send(JSON.stringify({
-        type: "player_position",
-        player: playerIndex + 1,
-        position: { x: pos.x, y: pos.y }
-      }));
-    }
-  });
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (playerRef?.current && ws?.readyState === WebSocket.OPEN) {
+        const pos = new THREE.Vector3();
+        playerRef.current.getWorldPosition(pos);
+        ws.send(JSON.stringify({
+          type: "player_position",
+          player: playerIndex + 1,
+          position: { x: pos.x, y: pos.y }
+        }));
+      }
+    }, 100); 
+    return () => clearInterval(interval);
+  }, [playerRef, playerIndex, ws]);
+
   return null;
 };
 
@@ -51,18 +32,6 @@ const CoinGame = ({
   ws,
   gameObjects = [],
 }) => {
-  const keyboardState = useKeyboardControls();
-  const effectiveFpgaControls = {
-    ...fpgaControls,
-    1: keyboardState
-  };
-
-  useEffect(() => {
-    console.log("Players:", players);
-    console.log("Game Objects:", gameObjects);
-  }, [players, gameObjects]);
-  
-
   const processedPlayers = players.map((p) =>
     typeof p === "string" ? { username: p } : p
   );
@@ -83,23 +52,30 @@ const CoinGame = ({
   });
 
   const renderedPlayers = playerData.map((player, index) => {
-    const isLocal = player.username === localPlayerName;
-    const control = effectiveFpgaControls?.[index + 1] || {};
-    const Component = index === 0 ? PlayerMario : PlayerWaluigi;
+    const isLocal = player.id === localPlayerName.id;
+    const control = fpgaControls?.[index + 1] || {};
+    const PlayerComponent = index === 0 ? PlayerMario : PlayerWaluigi;
+    console.log(`Player ${index + 1}`, { control });
+
     return (
-      <React.Fragment key={player.username}>
-        <Component
-          username={player.username}
-          initialPosition={player.position}
-          isPlayerPlayer={isLocal}
-          jumpLow={control.jump}
-          left={control.left}
-          right={control.right}
-          still={control.still}
-          playerRef={controlledPlayerRefs.current[index]}
-        />
-        <ReportPosition playerRef={controlledPlayerRefs.current[index]} playerIndex={index} ws={ws} />
-      </React.Fragment>
+      <React.Fragment key={player.id}>  
+      <PlayerComponent
+        username={player.username}
+        initialPosition={player.position}
+        isPlayerPlayer={isLocal}
+        click={control.click}
+        jumpLow={control.jump}
+        left={control.left}
+        right={control.right}
+        still={control.still}
+        playerRef={controlledPlayerRefs.current[index]}
+      />
+      <ReportPosition 
+        playerRef={controlledPlayerRefs.current[index]} 
+        playerIndex={index} 
+        ws={ws} 
+      />
+    </React.Fragment>
     );
   });
 

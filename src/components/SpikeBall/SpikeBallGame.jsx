@@ -1,60 +1,34 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Canvas, useFrame } from "@react-three/fiber";
+import { Canvas } from "@react-three/fiber";
 import * as THREE from "three";
 import Background from "../../pages/RythmGame/Background.jsx";
 import PlayerMario from "../Player/PlayerMario.jsx";
 import PlayerWaluigi from "../Player/PlayerWaluigi.jsx";
 import SpikeBall from "./SpikeBall.jsx"; 
 
-const useKeyboardControls = () => {
-  const [state, setState] = useState({
-    left: false,
-    right: false,
-    jump: false,
-    still: true,
-  });
-
-  useEffect(() => {
-    const handle = (down) => (e) => {
-      setState((prev) => {
-        const next = { ...prev };
-        if (e.key === "ArrowLeft") next.left = down;
-        if (e.key === "ArrowRight") next.right = down;
-        if (e.key === " ") next.jump = down;
-        next.still = !next.left && !next.right && !next.jump;
-        return next;
-      });
-    };
-    window.addEventListener("keydown", handle(true));
-    window.addEventListener("keyup", handle(false));
-    return () => {
-      window.removeEventListener("keydown", handle(true));
-      window.removeEventListener("keyup", handle(false));
-    };
-  }, []);
-
-  return state;
-};
-
 const ReportPosition = ({ playerRef, playerIndex, ws }) => {
-  useFrame(() => {
-    if (playerRef?.current && ws?.readyState === WebSocket.OPEN) {
-      const pos = new THREE.Vector3();
-      playerRef.current.getWorldPosition(pos);
-      ws.send(
-        JSON.stringify({
-          type: "player_position",
-          player: playerIndex + 1,
-          position: { x: pos.x, y: pos.y },
-        })
-      );
-    }
-  });
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (playerRef?.current && ws?.readyState === WebSocket.OPEN) {
+        const pos = new THREE.Vector3();
+        playerRef.current.getWorldPosition(pos);
+        ws.send(
+          JSON.stringify({
+            type: "player_position",
+            player: playerIndex + 1,
+            position: { x: pos.x, y: pos.y },
+          })
+        );
+      }
+    }, 100); 
+    return () => clearInterval(interval);
+  }, [playerRef, playerIndex, ws]);
+
   return null;
 };
 
 const SpikeBallGame = ({
-  fpgaControls = {},
+  fpgaControls = {}, 
   players = ["Mario", "Waluigi"],
   localPlayerName = "Mario",
   ws,
@@ -65,24 +39,12 @@ const SpikeBallGame = ({
   );
   const numPlayers = processedPlayers.length;
 
-  const keyboardState = useKeyboardControls();
-  const effectiveFpgaControls = {
-    ...fpgaControls,
-    1: keyboardState,
-  };
-
   const controlledPlayerRefs = useRef([]);
   useEffect(() => {
     controlledPlayerRefs.current = Array(numPlayers)
       .fill(null)
       .map((_, i) => controlledPlayerRefs.current[i] || React.createRef());
   }, [numPlayers]);
-
-  useEffect(() => {
-    console.log("Players:", players);
-    console.log("Game Objects:", gameObjects);
-  }, [players, gameObjects]);
-  
 
   const playerPositions = processedPlayers.map((player, index) => {
     const spacing = 10 / Math.max(1, numPlayers);
@@ -94,29 +56,30 @@ const SpikeBallGame = ({
   });
 
   const renderedPlayers = playerPositions.map((player, index) => {
-    const restrictToJumpOnly = (input = {}) => ({
-      jump: input.jump || false,
-      still: !input.jump,
-      left: false,
-      right: false,
-    });
-    
+    const isLocal = player.id === localPlayerName.id;
+    const control = fpgaControls?.[index + 1] || {}; 
     const PlayerComponent = index === 0 ? PlayerMario : PlayerWaluigi;
-    const isLocal = player.username === localPlayerName;
-    const control = restrictToJumpOnly(effectiveFpgaControls?.[index + 1]);
 
     return (
-      <React.Fragment key={player.username}>
-        <PlayerComponent
-          username={player.username}
-          initialPosition={player.position}
-          isPlayerPlayer={isLocal}
-          jumpLow={control.jump}
-          disableLateralMovement={true}
-          playerRef={controlledPlayerRefs.current[index]}
-        />
-        <ReportPosition playerRef={controlledPlayerRefs.current[index]} playerIndex={index} ws={ws} />
-      </React.Fragment>
+      <React.Fragment key={player.id}> 
+      <PlayerComponent
+        username={player.username}
+        initialPosition={player.position}
+        isPlayerPlayer={isLocal}
+        click={control.click}
+        jumpLow={control.jump}
+        left={control.left}
+        right={control.right}
+        still={control.still}
+        disableLateralMovement={true}
+        playerRef={controlledPlayerRefs.current[index]}
+      />
+      <ReportPosition 
+        playerRef={controlledPlayerRefs.current[index]} 
+        playerIndex={index} 
+        ws={ws} 
+      />
+    </React.Fragment>
     );
   });
 

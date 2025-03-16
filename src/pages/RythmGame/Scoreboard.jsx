@@ -2,6 +2,7 @@ import React from "react";
 import "./Scoreboard.css";
 
 const Scoreboard = ({ players = [] }) => {
+  console.log("🏆 Scoreboard:", players);
   return (
     <div className="scoreboard">
       <ul>

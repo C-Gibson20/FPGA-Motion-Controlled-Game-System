@@ -4,6 +4,7 @@ import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { playJumpSound } from "../Sounds/Sounds.jsx";
 
+// Models and their paths
 const MODELS = {
   MarioIdle: { path: "/models/MarioIdle.glb", scale: 0.003 },
   MarioJump: { path: "/models/MarioJump.glb", scale: 0.003 },
@@ -17,20 +18,82 @@ const PlayerMario = ({
   isPlayerPlayer,
   initialPosition,
   playerRef,
-  jumpLow,
-  click,
+  click,       // FPGA backflip
+  jumpLow,     // FPGA jump
+  left,        // FPGA left movement
+  right,       // FPGA right movement
+  still,       // FPGA still state
   disableLateralMovement = false,
 }) => {
   const [currentModel, setCurrentModel] = useState("MarioIdle");
+
   const groupRef = useRef();
   const activeAction = useRef(null);
+  const velocityY = useRef(0);
+  const isJumping = useRef(false);
+  const isBackFlipping = useRef(false);
   const jumpTriggeredRef = useRef(false);
   const clickTriggeredRef = useRef(false);
 
+  const speed = 0.005;
+  const jumpStrength = 0.07;
+  const gravity = 0.9;
+
+  const keys = useRef({
+    ArrowLeft: false,
+    ArrowRight: false,
+    Space: false,
+  });
+
+  // Expose player's mesh externally
+  useEffect(() => {
+    if (playerRef) {
+      playerRef.current = groupRef.current;
+    }
+  }, [playerRef]);
+
+  useEffect(() => {
+    const debugKeyLogger = (e) => {
+      console.log("KEY PRESSED:", e.key);
+    };
+  
+    window.addEventListener("keydown", debugKeyLogger);
+    return () => window.removeEventListener("keydown", debugKeyLogger);
+  }, []);
+  
+
+  // Key press listener (only for local player)
+  useEffect(() => {
+    if (!isPlayerPlayer) return;
+
+    const handleKeyDown = (e) => {
+      if (keys.current.hasOwnProperty(e.key)) keys.current[e.key] = true;
+
+      if (e.key === " " && !isJumping.current) {
+        isJumping.current = true;
+        velocityY.current = jumpStrength;
+        setCurrentModel("MarioJump");
+        playJumpSound();
+      }
+    };
+
+    const handleKeyUp = (e) => {
+      if (keys.current.hasOwnProperty(e.key)) keys.current[e.key] = false;
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+    };
+  }, [isPlayerPlayer]);
+
+  // Load models + animations
   const modelData = MODELS[currentModel];
   const { scene } = useGLTF(modelData.path);
 
-  // Load animations
   const { animations: idleAnimations } = useGLTF(MODELS.MarioIdle.path);
   const { animations: jumpAnimations } = useGLTF(MODELS.MarioJump.path);
   const { animations: clickAnimations } = useGLTF(MODELS.MarioBackFlip.path);
@@ -43,57 +106,12 @@ const PlayerMario = ({
   const { actions: sideStepActions } = useAnimations(sideStepAnimations, groupRef);
   const { actions: rightSideStepActions } = useAnimations(rightSideStepAnimations, groupRef);
 
-  const velocityY = useRef(0);
-  const speed = 0.005;
-  const jumpStrength = 0.07;
-  const gravity = 0.9;
-  const isJumping = useRef(false);
-  const isBackFlipping = useRef(false);
-  const keys = useRef({
-    ArrowLeft: false,
-    ArrowRight: false,
-    Space: false,
-  });
-
-  // Expose ref externally
-  useEffect(() => {
-    if (playerRef) {
-      playerRef.current = groupRef.current;
-    }
-  }, [playerRef]);
-
-  // Local keyboard controls
-  useEffect(() => {
-    if (!isPlayerPlayer) return;
-
-    const handleKeyDown = (e) => {
-      if (keys.current[e.key] !== undefined) keys.current[e.key] = true;
-      if (e.key === " " && !isJumping.current) {
-        isJumping.current = true;
-        velocityY.current = jumpStrength;
-        setCurrentModel("MarioJump");
-        playJumpSound();
-      }
-    };
-
-    const handleKeyUp = (e) => {
-      if (keys.current[e.key] !== undefined) keys.current[e.key] = false;
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    window.addEventListener("keyup", handleKeyUp);
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-      window.removeEventListener("keyup", handleKeyUp);
-    };
-  }, [isPlayerPlayer]);
-
-  // Main animation and movement logic
+  // Movement & Animation
   useFrame((_, delta) => {
     if (!groupRef.current) return;
     let didMove = false;
 
-    // FPGA-based jump
+    // FPGA Jump (if not already jumping)
     if (jumpLow && !jumpTriggeredRef.current && !isJumping.current) {
       jumpTriggeredRef.current = true;
       isJumping.current = true;
@@ -104,7 +122,7 @@ const PlayerMario = ({
       jumpTriggeredRef.current = false;
     }
 
-    // FPGA-based click (backflip)
+    // FPGA Backflip
     if (click && !clickTriggeredRef.current && !isBackFlipping.current) {
       clickTriggeredRef.current = true;
       isBackFlipping.current = true;
@@ -115,29 +133,44 @@ const PlayerMario = ({
       clickTriggeredRef.current = false;
     }
 
-    // Local movement (only if allowed)
+    // FPGA Lateral movement
+    if (!disableLateralMovement) {
+      if (left) {
+        groupRef.current.position.x -= speed;
+        setCurrentModel("MarioSideStep");
+        didMove = true;
+      }
+      if (right) {
+        groupRef.current.position.x += speed;
+        setCurrentModel("MarioRightSideStep");
+        didMove = true;
+      }
+    }
+
+    // Local keyboard movement (if enabled)
     if (isPlayerPlayer && !disableLateralMovement) {
       if (keys.current.ArrowLeft) {
         groupRef.current.position.x -= speed;
-        if (currentModel !== "MarioSideStep") setCurrentModel("MarioSideStep");
+        setCurrentModel("MarioSideStep");
         didMove = true;
       }
       if (keys.current.ArrowRight) {
         groupRef.current.position.x += speed;
-        if (currentModel !== "MarioRightSideStep") setCurrentModel("MarioRightSideStep");
+        setCurrentModel("MarioRightSideStep");
         didMove = true;
       }
     }
 
-    // Idle fallback
+    // Set idle if not moving or jumping
     if (!didMove && !isJumping.current && !isBackFlipping.current && currentModel !== "MarioIdle") {
       setCurrentModel("MarioIdle");
     }
 
-    // Jump arc motion
+    // Handle jump arc
     if (isJumping.current) {
       groupRef.current.position.y += velocityY.current;
       velocityY.current -= 0.3 * delta * gravity;
+
       if (groupRef.current.position.y <= initialPosition[1]) {
         groupRef.current.position.y = initialPosition[1];
         isJumping.current = false;
@@ -147,34 +180,32 @@ const PlayerMario = ({
     }
   });
 
-  // Handle animation transitions
+  // Handle animation switching
   useEffect(() => {
     if (activeAction.current) {
       activeAction.current.fadeOut(0.2);
     }
 
-    let action;
+    let action = null;
+
     if (currentModel === "MarioIdle") {
       action = idleActions["mixamo.com"] || Object.values(idleActions)[0];
       action?.setLoop(THREE.LoopRepeat, Infinity);
     } else if (currentModel === "MarioJump") {
       action = jumpActions["mixamo.com"] || Object.values(jumpActions)[0];
-      if (action) {
-        action.setLoop(THREE.LoopOnce, 1);
-        action.clampWhenFinished = true;
-      }
+      action?.setLoop(THREE.LoopOnce, 1);
+      action.clampWhenFinished = true;
     } else if (currentModel === "MarioBackFlip") {
       action = clickActions["mixamo.com"] || Object.values(clickActions)[0];
-      if (action) {
-        action.setLoop(THREE.LoopOnce, 1);
-        action.clampWhenFinished = true;
-        action.reset().fadeIn(0.2).play();
-        const duration = action.getClip().duration;
-        setTimeout(() => {
-          isBackFlipping.current = false;
-          setCurrentModel("MarioIdle");
-        }, duration * 1000);
-      }
+      action?.setLoop(THREE.LoopOnce, 1);
+      action.clampWhenFinished = true;
+      action.reset().fadeIn(0.2).play();
+
+      const duration = action.getClip().duration;
+      setTimeout(() => {
+        isBackFlipping.current = false;
+        setCurrentModel("MarioIdle");
+      }, duration * 1000);
     } else if (currentModel === "MarioSideStep") {
       action = sideStepActions["mixamo.com"] || Object.values(sideStepActions)[0];
       action?.setLoop(THREE.LoopRepeat, Infinity);

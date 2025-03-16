@@ -1,5 +1,3 @@
-// Menu.jsx
-
 import React, { useState } from "react";
 import './Menu.css';
 import ConnectionPopup from "../ConnexionPopup/ConnectionPopup.jsx";
@@ -15,7 +13,6 @@ const Menu = ({ onStart, onInitiateConnection, isConnected, players }) => {
     setPlayerNames(updatedNames);
   };
 
-  // Instead of opening its own WebSocket, call the centralized function in Root
   const handleStartConnection = () => {
     onInitiateConnection(numPlayers, playerNames);
     setShowPopup(true);
@@ -50,7 +47,7 @@ const Menu = ({ onStart, onInitiateConnection, isConnected, players }) => {
           onChange={(e) => {
             const num = parseInt(e.target.value);
             setNumPlayers(num);
-            setPlayerNames(Array(num).fill('')); // Reset player names when changing the number of players
+            setPlayerNames(Array(num).fill('')); 
           }}
           className="dropdown"
         >
@@ -70,7 +67,6 @@ const Menu = ({ onStart, onInitiateConnection, isConnected, players }) => {
         />
       ))}
 
-      {/* Only show the "Connect to Players" button if not yet connected */}
       {!isConnected && !showPopup && (
         <button onClick={handleStartConnection} className="start-button">
           Connect to Players
@@ -80,7 +76,7 @@ const Menu = ({ onStart, onInitiateConnection, isConnected, players }) => {
       {showPopup && (
         <ConnectionPopup
           isConnected={isConnected}
-          playerConnections={players}  // using the players array as the connection info
+          playerConnections={players} 
           expectedPlayers={numPlayers}
           onClose={() => setShowPopup(false)}
         >

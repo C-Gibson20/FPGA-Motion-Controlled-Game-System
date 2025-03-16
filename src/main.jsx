@@ -5,21 +5,30 @@ import { createRoot } from "react-dom/client";
 import Menu from "./pages/Menu/Menu.jsx";
 import GameSel from "./pages/GameSel/GameSel.jsx";
 import RhythmGame from "./pages/RythmGame/RhythmGame.jsx";
+import Scoreboard from "./pages/RythmGame/Scoreboard.jsx";
 
 function Root() {
-  const [gameState, setGameState] = useState('menu'); // 'menu', 'gameSelection', 'playing'
-  const [selectedGame, setSelectedGame] = useState('');
   const [players, setPlayers] = useState([]);
+  const [gameState, setGameState] = useState("menu"); // 'menu', 'gameSelection', 'playing'
+  const [selectedGame, setSelectedGame] = useState("");
   const [scores, setScores] = useState([]);
   const [wsInstance, setWsInstance] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
+  
+  const updateScore = (playerIndex, points) => {
+    setScores((prevScores) => {
+      const newScores = [...prevScores];
+      newScores[playerIndex] = (prevScores[playerIndex] || 0) + points;
+      return newScores;
+    });
+  };
 
-  // Centralized WebSocket setup function that sends the init message
   function setupWebSocket(initData) {
     const socket = new WebSocket("ws://13.61.26.147:8765");
-    
+
     socket.onopen = () => {
-      console.log("✅ WebSocket connected");
+      console.log("WebSocket connected");
+      setIsConnected(true);
       if (initData) {
         socket.send(JSON.stringify(initData));
       }
@@ -28,31 +37,35 @@ function Root() {
     socket.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
-        console.log("📩 WS message received:", data);
+        console.log("WS message received:", data);
 
-        // Accept both types to update the players list
-        if (data.type === "player_connected" || data.type === "react_player_connected") {
+        if (data.type === "player_connected") {
           console.log(`Player connected: ${data.name}`);
-          setPlayers(prev => [...prev, data.name]);
+          setPlayers((prev) => [
+            ...prev,
+            {
+              id: data.player || prev.length + 1,
+              name: data.name,
+              address: data.address || "",
+            },
+          ]);
         } else if (data.type === "all_connected") {
           console.log("All players are connected!");
-          setIsConnected(true);
-          setGameState('gameSelection');
+          setGameState("gameSelection");
         }
       } catch (err) {
-        console.error("❌ Error parsing WebSocket message:", err);
+        console.error("Error parsing WebSocket message:", err);
       }
     };
 
     socket.onclose = () => {
-      console.warn("⚠️ WebSocket disconnected");
+      console.warn("WebSocket disconnected");
       setIsConnected(false);
     };
 
     return socket;
   }
 
-  // Called by the Menu component to initiate connection with the desired player configuration
   const handleInitiateConnection = (numPlayers, playerNames) => {
     const initMessage = {
       type: "init",
@@ -63,23 +76,23 @@ function Root() {
     setWsInstance(socket);
   };
 
-  // Handle game selection from the GameSel component
   const handleGameSelect = (selectedGameName) => {
-    console.log("🎮 Game selected:", selectedGameName);
+    console.log("Game selected:", selectedGameName);
     setSelectedGame(selectedGameName);
-    setGameState('playing');
+    setGameState("playing");
     if (wsInstance && wsInstance.readyState === WebSocket.OPEN) {
-      console.log("📤 Sending game selection message to server");
-      wsInstance.send(JSON.stringify({
-        type: "game_selection",
-        mode: selectedGameName,
-      }));
+      console.log("Sending game selection message to server");
+      wsInstance.send(
+        JSON.stringify({
+          type: "game_selection",
+          mode: selectedGameName,
+        })
+      );
     }
   };
 
-  // Exit handler for the GameSel page (returns to the menu)
   const handleExit = () => {
-    setGameState('menu');
+    setGameState("menu");
     setPlayers([]);
     setIsConnected(false);
     if (wsInstance) {
@@ -88,35 +101,41 @@ function Root() {
     }
   };
 
-  // Exit handler for minigames (returns to game selection)
   const handleMinigameExit = () => {
-    setGameState('gameSelection');
-    // Optionally reset minigame-specific states if needed
+    setGameState("gameSelection");
   };
+
+  const showScoreboard = (gameState === "playing" || gameState === "gameSelection") && scores.length > 0;
+
+  const scoreboardData = players.map((player, index) => ({
+    username: player.name,
+    score: scores[index] || 0,
+    avatar: index === 0 ? "/images/mario.png" : "/images/waluigi.png",
+  }));
+
 
   return (
     <StrictMode>
       <div className="container">
-        {gameState === 'menu' && (
-          <Menu 
-            onStart={() => setGameState('gameSelection')}
+        {showScoreboard && <Scoreboard players={scoreboardData} />}
+
+        {gameState === "menu" && (
+          <Menu
+            onStart={() => setGameState("gameSelection")}
             onInitiateConnection={handleInitiateConnection}
             isConnected={isConnected}
             players={players}
           />
         )}
-        {gameState === 'gameSelection' && (
-          <GameSel
-            players={players}
-            setGameSel={handleGameSelect}
-            onExit={handleExit}
-          />
+        {gameState === "gameSelection" && (
+          <GameSel players={players} setGameSel={handleGameSelect} onExit={handleExit} />
         )}
-        {gameState === 'playing' && (
+        {gameState === "playing" && (
           <RhythmGame
             gameSel={selectedGame}
             players={players}
             scores={scores}
+            onScoreIncrement={updateScore}
             ws={wsInstance}
             onExit={handleMinigameExit}
           />

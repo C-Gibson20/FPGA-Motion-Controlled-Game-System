@@ -82,7 +82,6 @@ const ArrowGame = ({
     );
   };
 
-  // Handle Keyboard Input for Local Player
   useEffect(() => {
     const KEY_MAP = {
       ArrowUp: "J",

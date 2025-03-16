@@ -1,8 +1,8 @@
 import React from "react";
 import "./ConnectionPopup.css";
 
-const ConnectionPopup = ({ isConnected, playerConnections = {}, expectedPlayers, onClose, children }) => {
-  const allPlayersConnected = Object.keys(playerConnections).length === expectedPlayers;
+const ConnectionPopup = ({ isConnected, playerConnections = [], expectedPlayers, onClose, children }) => {
+  const allPlayersConnected = playerConnections.length === expectedPlayers;
 
   return (
     <div className="connection-popup">
@@ -12,19 +12,18 @@ const ConnectionPopup = ({ isConnected, playerConnections = {}, expectedPlayers,
           className="close-button"
           style={{ position: 'absolute', top: '10px', right: '10px' }}
         >
-          ✖
         </button>
         <h2>Server Connection Status</h2>
         {isConnected ? (
           <div>
             <p>Connected to Server</p>
             <p>
-              FPGA connections: {Object.keys(playerConnections).length} / {expectedPlayers}
+              FPGA connections: {playerConnections.length} / {expectedPlayers}
             </p>
             <ul>
-              {Object.entries(playerConnections).map(([player, address]) => (
-                <li key={player}>
-                  Player {player}: {address}
+              {playerConnections.map((player) => (
+                <li key={player.id}>
+                  Player {player.id}: {player.name} {player.address && `(${player.address})`}
                 </li>
               ))}
             </ul>
@@ -37,8 +36,7 @@ const ConnectionPopup = ({ isConnected, playerConnections = {}, expectedPlayers,
         ) : (
           <p>Waiting for Connection...</p>
         )}
-
-        {/* Render any children passed, including the Game Selection button */}
+        
         {children}
       </div>
     </div>
