@@ -48,7 +48,14 @@ const parseFpgaControl = (data) => {
 };
 
 // --- Custom Hook: Handle WebSocket Logic ---
-const useWebSocket = ({ ws, players, scores, onScoreIncrement, setFpgaControls, setGameObjects }) => {
+const useWebSocket = ({
+  ws,
+  players,
+  scores,
+  onScoreIncrement,
+  setFpgaControls,
+  setGameObjects,
+}) => {
   const latestScoresRef = useRef(scores);
 
   useEffect(() => {
@@ -77,11 +84,11 @@ const useWebSocket = ({ ws, players, scores, onScoreIncrement, setFpgaControls, 
         }));
       }
 
-      if (payload.type === "gameStateUpdate") {
+      if (payload.type === "gameStart" || payload.type === "gameStateUpdate") {
         setGameObjects(payload.objects || []);
-
-        // Update scores
-        if (payload.scores && typeof onScoreIncrement === "function") {
+        
+        // If it's a gameStateUpdate, update scores as well
+        if (payload.type === "gameStateUpdate" && payload.scores && typeof onScoreIncrement === "function") {
           const serverScores = payload.scores;
           players.forEach((_, index) => {
             const playerId = index + 1;
@@ -107,25 +114,17 @@ const useWebSocket = ({ ws, players, scores, onScoreIncrement, setFpgaControls, 
 const RhythmGame = ({ gameSel, players = [], scores, onScoreIncrement, ws, onExit }) => {
   const [fpgaControls, setFpgaControls] = useState({});
   const [gameObjects, setGameObjects] = useState([]);
-  const [data, setData] = useState([]);
-
-  // Fetch score data on mount (optional – not used in render)
-  // useEffect(() => {
-  //   axios
-  //     .get("http://localhost:5001/scores")
-  //     .then((res) => setData(res.data))
-  //     .catch((err) => console.error("Error fetching data:", err));
-  // }, []);
 
   useWebSocket({
     ws,
     players,
     scores,
-    onScoreIncrement,
+    onScoreIncrement: onScoreIncrement || (() => {}),
     setFpgaControls,
     setGameObjects,
   });
 
+  // Ensure that `gameSel` is valid before attempting to load the game
   const SelectedGame = GAMES[gameSel];
 
   return (
@@ -153,5 +152,6 @@ const RhythmGame = ({ gameSel, players = [], scores, onScoreIncrement, ws, onExi
     </div>
   );
 };
+
 
 export default RhythmGame;

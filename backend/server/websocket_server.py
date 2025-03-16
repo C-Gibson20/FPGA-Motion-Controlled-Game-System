@@ -23,8 +23,8 @@ def handle_init_message(data, game_manager, ws):
     # Using the GameManager's method to update the config
     game_manager.update_config(data.get("numPlayers", 1), data.get("names", []))
 
-    response = {"type": "config_ack"}
-    return response
+    name = data.get("names", ["Player 1"])[0]
+    return {"type": "player_connected", "name": name}
 
 
 def handle_game_selection_message(data, game_manager):

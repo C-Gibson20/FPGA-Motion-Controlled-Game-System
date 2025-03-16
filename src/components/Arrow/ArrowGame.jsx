@@ -43,6 +43,11 @@ const ArrowGame = ({
 
   const feedbackRef = useRef({});
   const controlledPlayerRefs = useRef([]);
+  useEffect(() => {
+    console.log("Players:", players);
+    console.log("Game Objects:", gameObjects);
+  }, [players, gameObjects]);
+  
 
   useEffect(() => {
     controlledPlayerRefs.current = players.map((_, i) => controlledPlayerRefs.current[i] || React.createRef());

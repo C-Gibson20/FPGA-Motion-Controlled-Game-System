@@ -1,75 +1,90 @@
-import { StrictMode, useEffect, useState } from "react";
-import { createRoot } from "react-dom/client";
-import "./index.css";
-import "./pages/Menu/Menu.css";
-import "./pages/RythmGame/RhythmGame.css";
+// Root.jsx
 
+import React, { StrictMode, useState, useEffect } from "react";
+import { createRoot } from "react-dom/client";
 import Menu from "./pages/Menu/Menu.jsx";
 import GameSel from "./pages/GameSel/GameSel.jsx";
 import RhythmGame from "./pages/RythmGame/RhythmGame.jsx";
 import Scoreboard from "./pages/RythmGame/Scoreboard.jsx";
 
-// --- WebSocket Setup Function ---
-function setupWebSocket({ onStartGame, setPlayers }) {
-  const socket = new WebSocket("ws://13.61.26.147:8765");
+// --- Root Component ---
+function Root() {
+  const [gameState, setGameState] = useState('menu'); // 'menu', 'gameSelection', 'playing'
+  const [selectedGame, setSelectedGame] = useState('');
+  const [players, setPlayers] = useState([]);
+  const [scores, setScores] = useState([]);
+  const [wsInstance, setWsInstance] = useState(null);
+  const [isConnected, setIsConnected] = useState(false);
 
-  socket.onopen = () => {
-    console.log("✅ WebSocket connected");
+  // WebSocket setup function
+  function setupWebSocket() {
+    const socket = new WebSocket("ws://13.61.26.147:8765");
+    socket.onopen = () => {
+      console.log("✅ WebSocket connected");
+      socket.send(
+        JSON.stringify({
+          type: "init",
+          numPlayers: 1,
+          names: ["FPGA Player"],
+        })
+      );
+    };
 
-    // Send the 'init' message to inform the server about the FPGA connection.
-    socket.send(
-      JSON.stringify({
-        type: "init",
-        numPlayers: 1, // You can set the actual number of players based on the FPGA connections
-        names: ["FPGA Player"], // Use a placeholder name, it could be adjusted based on the FPGA connection
-      })
-    );
-  };
+    socket.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        console.log("📩 WS message received:", data);
 
-  socket.onmessage = (event) => {
-    try {
-      const data = JSON.parse(event.data);
-      console.log("📩 WS message received:", data);
-
-      if (data.type === "startGame") {
-        onStartGame(data.mode);
-      } else if (data.type === "player_connected") {
-        // Handle player connected (you might get an update when the FPGA is recognized)
-        console.log(`Player connected: ${data.name}`);
-        setPlayers((prev) => [...prev, data.name]);
+        if (data.type === "player_connected") {
+          console.log(`Player connected: ${data.name}`);
+          setPlayers((prev) => [...prev, data.name]);
+        } else if (data.type === "all_connected") {
+          console.log("All players are connected!");
+          setIsConnected(true);
+          setGameState('gameSelection');
+        }
+      } catch (err) {
+        console.error("❌ Error parsing WebSocket message:", err);
       }
-    } catch (err) {
-      console.error("❌ Error parsing WebSocket message:", err);
+    };
+
+    socket.onclose = () => {
+      console.warn("⚠️ WebSocket disconnected");
+    };
+
+    return socket;
+  }
+
+  // Function to handle game selection from GameSel page
+  const handleGameSelect = (selectedGameName) => {
+    console.log("🎮 Game selected:", selectedGameName);
+    setSelectedGame(selectedGameName);
+    setGameState('playing');
+    if (wsInstance && wsInstance.readyState === WebSocket.OPEN) {
+      wsInstance.send(
+        JSON.stringify({
+          type: "game_selection",
+          mode: selectedGameName,
+        })
+      );
     }
   };
 
-  socket.onclose = () => {
-    console.warn("⚠️ WebSocket disconnected");
+  // Exit handler for GameSel page (returns to the menu)
+  const handleExit = () => {
+    setGameState('menu');
+    setPlayers([]);
+    setIsConnected(false);
   };
 
-  return socket;
-}
-
-// --- Root Component ---
-function Root() {
-  const [gameStarted, setGameStarted] = useState(false);
-  const [gameSel, setGameSel] = useState(null); // No dev shortcut: Start on the menu screen
-  const [players, setPlayers] = useState([]); // Empty until fetched from WebSocket
-  const [scores, setScores] = useState([]);
-  const [wsInstance, setWsInstance] = useState(null);
-
-  const handleStartGame = (mode) => {
-    setGameSel(mode);
-    setGameStarted(true);
+  // NEW: Exit handler for minigames (returns to the game selection page)
+  const handleMinigameExit = () => {
+    setGameState('gameSelection');
+    // Optionally reset minigame-specific states if needed
   };
 
-  // WebSocket setup once on mount
   useEffect(() => {
-    const socket = setupWebSocket({
-      onStartGame: handleStartGame,
-      setPlayers,
-    });
-
+    const socket = setupWebSocket();
     setWsInstance(socket);
 
     return () => {
@@ -77,73 +92,31 @@ function Root() {
     };
   }, []);
 
-  // Global score updater
-  const updateScore = (playerIndex, points) => {
-    setScores((prevScores) => {
-      const newScores = [...prevScores];
-      newScores[playerIndex] = (prevScores[playerIndex] || 0) + points;
-      console.log(`⬆️ Updated Player ${playerIndex + 1} score: ${newScores[playerIndex]}`);
-      return newScores;
-    });
-  };
-
-  const handleGameSelect = (selectedGame) => {
-    console.log("🎮 Game selected:", selectedGame);
-    setGameSel(selectedGame);
-    setGameStarted(true);
-
-    if (wsInstance && wsInstance.readyState === WebSocket.OPEN) {
-      wsInstance.send(
-        JSON.stringify({
-          type: "game_selection",
-          mode: selectedGame,
-        })
-      );
-    }
-  };
-
-  const handleExit = () => {
-    setGameStarted(false);
-    setGameSel(null); // Reset to show the menu page
-  };
-
-  const showScoreboard = (gameSel && !gameStarted) || gameStarted;
-  const isGameSelection = !gameStarted && gameSel;
-  const isInGame = gameStarted;
-
-  const scoreboardData = players.map((name, index) => ({
-    username: name,
-    score: scores[index] || 0,
-    avatar: index === 0 ? "/images/mario.png" : "/images/waluigi.png",
-  }));
-
   return (
     <StrictMode>
       <div className="container">
-        {showScoreboard && <Scoreboard players={scoreboardData} />}
-
-        {isGameSelection ? (
+        {gameState === 'menu' && <Menu onStart={() => setGameState('gameSelection')} />}
+        {gameState === 'gameSelection' && (
           <GameSel
-            scores={scores}
             players={players}
             setGameSel={handleGameSelect}
-            onExit={() => setGameSel(null)}
+            onExit={handleExit}
           />
-        ) : isInGame ? (
+        )}
+        {gameState === 'playing' && (
           <RhythmGame
-            gameSel={gameSel}
+            gameSel={selectedGame}
             players={players}
             scores={scores}
             ws={wsInstance}
-            onScoreIncrement={updateScore}
-            onExit={handleExit}
+            onExit={handleMinigameExit} // Use the new minigame exit handler here
           />
-        ) : (
-          <Menu />
         )}
       </div>
     </StrictMode>
   );
 }
+
+
 
 createRoot(document.getElementById("root")).render(<Root />);

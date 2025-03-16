@@ -57,6 +57,12 @@ const CoinGame = ({
     1: keyboardState
   };
 
+  useEffect(() => {
+    console.log("Players:", players);
+    console.log("Game Objects:", gameObjects);
+  }, [players, gameObjects]);
+  
+
   const processedPlayers = players.map((p) =>
     typeof p === "string" ? { username: p } : p
   );

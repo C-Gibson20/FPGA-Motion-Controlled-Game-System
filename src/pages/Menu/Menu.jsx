@@ -1,14 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from "react";
 import './Menu.css';
-import ConnectionPopup from '../ConnexionPopup/ConnectionPopup.jsx';
+import ConnectionPopup from "../ConnexionPopup/ConnectionPopup.jsx";
 
 const Menu = ({ onStart }) => {
   const [numPlayers, setNumPlayers] = useState(1);
   const [playerNames, setPlayerNames] = useState(['']);
   const [showPopup, setShowPopup] = useState(false);
-  const [ws, setWs] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
-  const [playerConnections, setPlayerConnections] = useState({}); // Mapping: player id -> FPGA address
+  const [playerConnections, setPlayerConnections] = useState({});
 
   const handlePlayerChange = (index, name) => {
     const updatedNames = [...playerNames];
@@ -16,14 +15,12 @@ const Menu = ({ onStart }) => {
     setPlayerNames(updatedNames);
   };
 
-  // This function starts the WebSocket connection and sends the game configuration.
   const handleStartConnection = () => {
     setShowPopup(true);
-    const socket = new WebSocket('ws://13.61.26.147:8765/'); // Replace with your server address
+    const socket = new WebSocket('ws://13.61.26.147:8765/');
 
     socket.onopen = () => {
       console.log('WebSocket connected');
-      setWs(socket);
       setIsConnected(true);
       const initMessage = JSON.stringify({
         type: "init",
@@ -49,29 +46,18 @@ const Menu = ({ onStart }) => {
         setPlayerConnections(prev => ({ ...prev, [data.player]: data.address }));
       } else if (data.type === "all_connected") {
         console.log("All FPGA connections established:", data.players);
-        // Even if "all_connected" is received, we also rely on our useEffect below.
+        // Once all players are connected, show the Game Selection button in the popup
+        setShowPopup(true);
       } else if (data.type === "data") {
         console.log(`Data from player ${data.player}:`, data.data);
-        // Handle incoming FPGA data as needed.
       }
     };
   };
 
-  // useEffect to monitor connections for multiplayer mode.
-  useEffect(() => {
-    // Only check in multiplayer mode.
-    if (numPlayers > 1 && Object.keys(playerConnections).length === numPlayers && ws) {
-      console.log("All players connected via useEffect:", playerConnections);
-      onStart(playerNames, ws);
-      setShowPopup(false);
-    }
-  }, [playerConnections, numPlayers, ws, playerNames, onStart]);
-
-  // This function is called when the user clicks "Start Game" in the popup (for solo or manual start).
-  const handleGameStart = () => {
-    console.log("Starting game with players:", playerNames);
-    onStart(playerNames, ws);
+  const handleGameSelectionStart = () => {
+    // Close the popup and start the game
     setShowPopup(false);
+    onStart(); // Notify parent component (Root) that the game can start
   };
 
   return (
@@ -98,7 +84,7 @@ const Menu = ({ onStart }) => {
           onChange={(e) => {
             const num = parseInt(e.target.value);
             setNumPlayers(num);
-            setPlayerNames(Array(num).fill(''));
+            setPlayerNames(Array(num).fill('')); // Reset player names when changing number of players
           }}
           className="dropdown"
         >
@@ -106,6 +92,7 @@ const Menu = ({ onStart }) => {
           <option value={2}>2</option>
         </select>
       </div>
+
       {playerNames.map((name, index) => (
         <input
           key={index}
@@ -116,9 +103,12 @@ const Menu = ({ onStart }) => {
           className="input-field"
         />
       ))}
-      <button onClick={handleStartConnection} className="start-button">
-        Connect to Players
-      </button>
+
+      {!isConnected && !showPopup && (
+        <button onClick={handleStartConnection} className="start-button">
+          Connect to Players
+        </button>
+      )}
 
       {showPopup && (
         <ConnectionPopup
@@ -126,8 +116,11 @@ const Menu = ({ onStart }) => {
           playerConnections={playerConnections}
           expectedPlayers={numPlayers}
           onClose={() => setShowPopup(false)}
-          onStartGame={handleGameStart}
-        />
+        >
+          <button onClick={handleGameSelectionStart} className="start-game-selection-button">
+            Start Game Selection
+          </button>
+        </ConnectionPopup>
       )}
     </div>
   );

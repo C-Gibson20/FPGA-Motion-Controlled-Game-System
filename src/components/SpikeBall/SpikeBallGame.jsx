@@ -64,7 +64,6 @@ const SpikeBallGame = ({
     typeof p === "string" ? { username: p } : p
   );
   const numPlayers = processedPlayers.length;
-  if (numPlayers === 0) return <div>No players</div>;
 
   const keyboardState = useKeyboardControls();
   const effectiveFpgaControls = {
@@ -78,6 +77,12 @@ const SpikeBallGame = ({
       .fill(null)
       .map((_, i) => controlledPlayerRefs.current[i] || React.createRef());
   }, [numPlayers]);
+
+  useEffect(() => {
+    console.log("Players:", players);
+    console.log("Game Objects:", gameObjects);
+  }, [players, gameObjects]);
+  
 
   const playerPositions = processedPlayers.map((player, index) => {
     const spacing = 10 / Math.max(1, numPlayers);
