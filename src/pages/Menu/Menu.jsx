@@ -1,13 +1,13 @@
+// Menu.jsx
+
 import React, { useState } from "react";
 import './Menu.css';
 import ConnectionPopup from "../ConnexionPopup/ConnectionPopup.jsx";
 
-const Menu = ({ onStart }) => {
+const Menu = ({ onStart, onInitiateConnection, isConnected, players }) => {
   const [numPlayers, setNumPlayers] = useState(1);
   const [playerNames, setPlayerNames] = useState(['']);
   const [showPopup, setShowPopup] = useState(false);
-  const [isConnected, setIsConnected] = useState(false);
-  const [playerConnections, setPlayerConnections] = useState({});
 
   const handlePlayerChange = (index, name) => {
     const updatedNames = [...playerNames];
@@ -15,49 +15,15 @@ const Menu = ({ onStart }) => {
     setPlayerNames(updatedNames);
   };
 
+  // Instead of opening its own WebSocket, call the centralized function in Root
   const handleStartConnection = () => {
+    onInitiateConnection(numPlayers, playerNames);
     setShowPopup(true);
-    const socket = new WebSocket('ws://13.61.26.147:8765/');
-
-    socket.onopen = () => {
-      console.log('WebSocket connected');
-      setIsConnected(true);
-      const initMessage = JSON.stringify({
-        type: "init",
-        numPlayers: numPlayers,
-        names: playerNames
-      });
-      socket.send(initMessage);
-    };
-
-    socket.onerror = (error) => {
-      console.error('WebSocket error:', error);
-    };
-
-    socket.onclose = () => {
-      console.log('WebSocket disconnected');
-      setIsConnected(false);
-    };
-
-    socket.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      console.log("Received from server:", data);
-      if (data.type === "player_connected") {
-        setPlayerConnections(prev => ({ ...prev, [data.player]: data.address }));
-      } else if (data.type === "all_connected") {
-        console.log("All FPGA connections established:", data.players);
-        // Once all players are connected, show the Game Selection button in the popup
-        setShowPopup(true);
-      } else if (data.type === "data") {
-        console.log(`Data from player ${data.player}:`, data.data);
-      }
-    };
   };
 
   const handleGameSelectionStart = () => {
-    // Close the popup and start the game
     setShowPopup(false);
-    onStart(); // Notify parent component (Root) that the game can start
+    onStart();
   };
 
   return (
@@ -84,7 +50,7 @@ const Menu = ({ onStart }) => {
           onChange={(e) => {
             const num = parseInt(e.target.value);
             setNumPlayers(num);
-            setPlayerNames(Array(num).fill('')); // Reset player names when changing number of players
+            setPlayerNames(Array(num).fill('')); // Reset player names when changing the number of players
           }}
           className="dropdown"
         >
@@ -104,6 +70,7 @@ const Menu = ({ onStart }) => {
         />
       ))}
 
+      {/* Only show the "Connect to Players" button if not yet connected */}
       {!isConnected && !showPopup && (
         <button onClick={handleStartConnection} className="start-button">
           Connect to Players
@@ -113,7 +80,7 @@ const Menu = ({ onStart }) => {
       {showPopup && (
         <ConnectionPopup
           isConnected={isConnected}
-          playerConnections={playerConnections}
+          playerConnections={players}  // using the players array as the connection info
           expectedPlayers={numPlayers}
           onClose={() => setShowPopup(false)}
         >

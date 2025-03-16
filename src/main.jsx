@@ -1,13 +1,11 @@
 // Root.jsx
 
-import React, { StrictMode, useState, useEffect } from "react";
+import React, { StrictMode, useState } from "react";
 import { createRoot } from "react-dom/client";
 import Menu from "./pages/Menu/Menu.jsx";
 import GameSel from "./pages/GameSel/GameSel.jsx";
 import RhythmGame from "./pages/RythmGame/RhythmGame.jsx";
-import Scoreboard from "./pages/RythmGame/Scoreboard.jsx";
 
-// --- Root Component ---
 function Root() {
   const [gameState, setGameState] = useState('menu'); // 'menu', 'gameSelection', 'playing'
   const [selectedGame, setSelectedGame] = useState('');
@@ -16,18 +14,15 @@ function Root() {
   const [wsInstance, setWsInstance] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
 
-  // WebSocket setup function
-  function setupWebSocket() {
+  // Centralized WebSocket setup function that sends the init message
+  function setupWebSocket(initData) {
     const socket = new WebSocket("ws://13.61.26.147:8765");
+    
     socket.onopen = () => {
       console.log("✅ WebSocket connected");
-      socket.send(
-        JSON.stringify({
-          type: "init",
-          numPlayers: 1,
-          names: ["FPGA Player"],
-        })
-      );
+      if (initData) {
+        socket.send(JSON.stringify(initData));
+      }
     };
 
     socket.onmessage = (event) => {
@@ -35,9 +30,10 @@ function Root() {
         const data = JSON.parse(event.data);
         console.log("📩 WS message received:", data);
 
-        if (data.type === "player_connected") {
+        // Accept both types to update the players list
+        if (data.type === "player_connected" || data.type === "react_player_connected") {
           console.log(`Player connected: ${data.name}`);
-          setPlayers((prev) => [...prev, data.name]);
+          setPlayers(prev => [...prev, data.name]);
         } else if (data.type === "all_connected") {
           console.log("All players are connected!");
           setIsConnected(true);
@@ -50,53 +46,65 @@ function Root() {
 
     socket.onclose = () => {
       console.warn("⚠️ WebSocket disconnected");
+      setIsConnected(false);
     };
 
     return socket;
   }
 
-  // Function to handle game selection from GameSel page
+  // Called by the Menu component to initiate connection with the desired player configuration
+  const handleInitiateConnection = (numPlayers, playerNames) => {
+    const initMessage = {
+      type: "init",
+      numPlayers: numPlayers,
+      names: playerNames,
+    };
+    const socket = setupWebSocket(initMessage);
+    setWsInstance(socket);
+  };
+
+  // Handle game selection from the GameSel component
   const handleGameSelect = (selectedGameName) => {
     console.log("🎮 Game selected:", selectedGameName);
     setSelectedGame(selectedGameName);
     setGameState('playing');
     if (wsInstance && wsInstance.readyState === WebSocket.OPEN) {
       console.log("📤 Sending game selection message to server");
-      wsInstance.send(
-        JSON.stringify({
-          type: "game_selection",
-          mode: selectedGameName,
-        })
-      );
+      wsInstance.send(JSON.stringify({
+        type: "game_selection",
+        mode: selectedGameName,
+      }));
     }
   };
 
-  // Exit handler for GameSel page (returns to the menu)
+  // Exit handler for the GameSel page (returns to the menu)
   const handleExit = () => {
     setGameState('menu');
     setPlayers([]);
     setIsConnected(false);
+    if (wsInstance) {
+      wsInstance.close();
+      setWsInstance(null);
+    }
   };
 
-  // NEW: Exit handler for minigames (returns to the game selection page)
+  // Exit handler for minigames (returns to game selection)
   const handleMinigameExit = () => {
     setGameState('gameSelection');
     // Optionally reset minigame-specific states if needed
   };
 
-  useEffect(() => {
-    const socket = setupWebSocket();
-    setWsInstance(socket);
-
-    return () => {
-      socket.close();
-    };
-  }, []);
-
   return (
     <StrictMode>
       <div className="container">
-        {gameState === 'menu' && <Menu onStart={() => setGameState('gameSelection')} />}
+        {gameState === 'menu' && (
+          <Menu 
+            onStart={() => setGameState('gameSelection')}
+            onInitiateConnection={handleInitiateConnection}
+            isConnected={isConnected}
+            players={players}
+          />
+        )}
         {gameState === 'gameSelection' && (
           <GameSel
             players={players}
@@ -110,14 +118,12 @@ function Root() {
             players={players}
             scores={scores}
             ws={wsInstance}
-            onExit={handleMinigameExit} // Use the new minigame exit handler here
+            onExit={handleMinigameExit}
           />
         )}
       </div>
     </StrictMode>
   );
 }
-
-
 
 createRoot(document.getElementById("root")).render(<Root />);
