@@ -28,6 +28,7 @@ def handle_init_message(data, game_manager, ws):
 
 
 def handle_game_selection_message(data, game_manager):
+    print(f"Received game selection message: {data}")  # Debugging: Check what data is received
     game_manager.mode = data["mode"]
     game_manager.start_time = time.time()
     game_manager.objects.clear()
@@ -39,11 +40,13 @@ def handle_game_selection_message(data, game_manager):
 
 
 def handle_player_position_message(data, game_manager):
+    print(f"Received player position message: {data}")  # Debugging: Check what data is received
     game_manager.player_positions[data["player"]] = data["position"]
     return None
 
 
 def handle_player_input_message(data, game_manager):
+    print(f"Received player input message: {data}")  # Debugging: Check what data is received
     game_manager.player_input_queue.append({
         "player": data["player"],
         "action": data["action"],
@@ -53,6 +56,7 @@ def handle_player_input_message(data, game_manager):
 
 
 def handle_get_scores_message():
+    print("Received get scores message")  # Debugging: Check if message is received
     return {"type": "score_data", "scores": get_scores()}
 
 

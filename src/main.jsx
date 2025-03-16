@@ -61,6 +61,7 @@ function Root() {
     setSelectedGame(selectedGameName);
     setGameState('playing');
     if (wsInstance && wsInstance.readyState === WebSocket.OPEN) {
+      console.log("📤 Sending game selection message to server");
       wsInstance.send(
         JSON.stringify({
           type: "game_selection",
