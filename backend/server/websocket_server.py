@@ -24,7 +24,7 @@ def handle_init_message(data, game_manager, ws):
     game_manager.update_config(data.get("numPlayers", 1), data.get("names", []))
 
     name = data.get("names", ["Player 1"])[0]
-    return {"type": "react_player_connected", "name": name}
+    return {"type": "player_connected", "name": name}
 
 
 def handle_game_selection_message(data, game_manager):

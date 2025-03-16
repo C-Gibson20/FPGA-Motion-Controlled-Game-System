@@ -35,7 +35,7 @@ function Root() {
         const data = JSON.parse(event.data);
         console.log("📩 WS message received:", data);
 
-        if (data.type === "react_player_connected") {
+        if (data.type === "player_connected") {
           console.log(`Player connected: ${data.name}`);
           setPlayers((prev) => [...prev, data.name]);
         } else if (data.type === "all_connected") {
