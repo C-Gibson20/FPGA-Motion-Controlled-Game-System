@@ -42,7 +42,7 @@ const Menu = ({ onStart }) => {
     socket.onmessage = (event) => {
       const data = JSON.parse(event.data);
       console.log("Received from server:", data);
-      if (data.type === "player_connected") {
+      if (data.type === "react_player_connected") {
         setPlayerConnections(prev => ({ ...prev, [data.player]: data.address }));
       } else if (data.type === "all_connected") {
         console.log("All FPGA connections established:", data.players);
