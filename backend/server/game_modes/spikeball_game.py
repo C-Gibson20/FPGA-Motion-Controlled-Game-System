@@ -29,7 +29,7 @@ def update_spikeball_for_player(game_manager, spike, new_x, spike_pos):
     scored_hits = set(spike.get("scoredHits", []))
     scored_dodges = set(spike.get("scoredDodges", []))
 
-    for pid in game_manager.player_positions.items():
+    for pid in game_manager.player_positions:
         scored_hits, scored_dodges = spikeball_collision(
             spike_pos, new_x, game_manager, pid, scored_hits, scored_dodges
         )
