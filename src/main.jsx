@@ -12,8 +12,7 @@ function Root() {
   const [scores, setScores] = useState([]);
   const [wsInstance, setWsInstance] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
-  const [localPlayerId, setLocalPlayerId] = useState(null);
-  const [playerNamesInput, setPlayerNamesInput] = useState([]);
+  const [hasSelectedGame, setHasSelectedGame] = useState(false); // prevent multiple sends
 
   const updateScore = (playerIndex, points) => {
     setScores((prevScores) => {
@@ -40,35 +39,23 @@ function Root() {
         console.log("WS message received:", data);
 
         if (data.type === "player_connected") {
-          console.log(`Player connected: ${data.name}`);
-
-          setPlayers((prev) => {
-            const newPlayer = {
-              id: data.player || prev.length + 1,
-              name: data.name,
-              address: data.address || "",
-            };
-
-            // Identify local player by matching name
-            if (playerNamesInput.includes(newPlayer.name)) {
-              setLocalPlayerId(newPlayer.id);
-              console.log("Local player ID set to:", newPlayer.id);
-            }
-
-            return [...prev, newPlayer];
-          });
+          const newPlayer = {
+            id: data.player || players.length + 1,
+            name: data.name,
+            address: data.address || "",
+          };
+          setPlayers((prev) => [...prev, newPlayer]);
 
         } else if (data.type === "all_connected") {
-          console.log("All players are connected!");
           setGameState("gameSelection");
-
-        } else if (data.type === "game_selection_error") {
-          alert(data.message);
 
         } else if (data.type === "startGame") {
           console.log("Game starting:", data.mode);
           setSelectedGame(data.mode);
           setGameState("playing");
+
+        } else if (data.type === "game_selection_error") {
+          alert(data.message);
         }
 
       } catch (err) {
@@ -85,45 +72,42 @@ function Root() {
   }
 
   const handleInitiateConnection = (numPlayers, playerNames) => {
-    setPlayerNamesInput(playerNames); // Store for local player matching
-
     const initMessage = {
       type: "init",
       numPlayers: numPlayers,
       names: playerNames,
     };
-
     const socket = setupWebSocket(initMessage);
     setWsInstance(socket);
   };
 
   const handleGameSelect = (selectedGameName) => {
-    const isPlayerOne = localPlayerId === 1;
-  
-    if (wsInstance && wsInstance.readyState === WebSocket.OPEN && isPlayerOne) {
-      console.log("Player 1 is selecting the game:", selectedGameName);
-      wsInstance.send(
-        JSON.stringify({
-          type: "game_selection",
-          player: localPlayerId,
-          mode: selectedGameName,
-        })
-      );
-    } else {
-      console.log("Waiting for Player 1 to select the game.");
+    if (hasSelectedGame || !wsInstance || wsInstance.readyState !== WebSocket.OPEN) {
+      return; // prevent multiple sends or if not ready
     }
-  
-    setSelectedGame(selectedGameName); // local display
-    // DO NOT change gameState here — wait for server to confirm
+
+    console.log("Sending game selection:", selectedGameName);
+    setHasSelectedGame(true); // block further selections
+
+    wsInstance.send(
+      JSON.stringify({
+        type: "game_selection",
+        mode: selectedGameName,
+        player: 1, // arbitrary, since server only needs to act on first
+      })
+    );
+
+    setSelectedGame(selectedGameName); // optional local display
+    // Wait for server to trigger "startGame" before transitioning state
   };
-  
 
   const handleExit = () => {
     setGameState("menu");
     setPlayers([]);
     setIsConnected(false);
-    setLocalPlayerId(null);
-    setPlayerNamesInput([]);
+    setSelectedGame("");
+    setScores([]);
+    setHasSelectedGame(false);
     if (wsInstance) {
       wsInstance.close();
       setWsInstance(null);
@@ -132,6 +116,7 @@ function Root() {
 
   const handleMinigameExit = () => {
     setGameState("gameSelection");
+    setHasSelectedGame(false); // allow re-selection after game
   };
 
   const showScoreboard = (gameState === "playing" || gameState === "gameSelection") && scores.length > 0;
