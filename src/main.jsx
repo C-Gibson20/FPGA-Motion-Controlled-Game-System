@@ -1,5 +1,3 @@
-// Root.jsx
-
 import React, { StrictMode, useState } from "react";
 import { createRoot } from "react-dom/client";
 import Menu from "./pages/Menu/Menu.jsx";
@@ -14,8 +12,9 @@ function Root() {
   const [scores, setScores] = useState([]);
   const [wsInstance, setWsInstance] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
-  const [gameVotes, setGameVotes] = useState({});
-  
+  const [localPlayerId, setLocalPlayerId] = useState(null);
+  const [playerNamesInput, setPlayerNamesInput] = useState([]);
+
   const updateScore = (playerIndex, points) => {
     setScores((prevScores) => {
       const newScores = [...prevScores];
@@ -42,21 +41,36 @@ function Root() {
 
         if (data.type === "player_connected") {
           console.log(`Player connected: ${data.name}`);
-          setPlayers((prev) => [
-            ...prev,
-            {
+
+          setPlayers((prev) => {
+            const newPlayer = {
               id: data.player || prev.length + 1,
               name: data.name,
               address: data.address || "",
-            },
-          ]);
+            };
+
+            // Identify local player by matching name
+            if (playerNamesInput.includes(newPlayer.name)) {
+              setLocalPlayerId(newPlayer.id);
+              console.log("Local player ID set to:", newPlayer.id);
+            }
+
+            return [...prev, newPlayer];
+          });
+
         } else if (data.type === "all_connected") {
           console.log("All players are connected!");
           setGameState("gameSelection");
+
         } else if (data.type === "game_selection_error") {
           alert(data.message);
+
+        } else if (data.type === "startGame") {
+          console.log("Game starting:", data.mode);
+          setSelectedGame(data.mode);
+          setGameState("playing");
         }
-        
+
       } catch (err) {
         console.error("Error parsing WebSocket message:", err);
       }
@@ -71,36 +85,44 @@ function Root() {
   }
 
   const handleInitiateConnection = (numPlayers, playerNames) => {
+    setPlayerNamesInput(playerNames); // Store for local player matching
+
     const initMessage = {
       type: "init",
       numPlayers: numPlayers,
       names: playerNames,
     };
+
     const socket = setupWebSocket(initMessage);
     setWsInstance(socket);
   };
 
   const handleGameSelect = (selectedGameName) => {
-    if (wsInstance && wsInstance.readyState === WebSocket.OPEN) {
+    if (wsInstance && wsInstance.readyState === WebSocket.OPEN && localPlayerId !== null) {
       console.log("Sending game selection message to server");
       wsInstance.send(
         JSON.stringify({
           type: "game_selection",
-          player: players[0].id,
+          player: localPlayerId,
           mode: selectedGameName,
         })
       );
+    } else {
+      console.warn("WebSocket not ready or localPlayerId not set");
     }
-    console.log("Game selected:", selectedGameName);
+
+    console.log("Game selected locally:", selectedGameName);
     setSelectedGame(selectedGameName);
-    setGameState("playing");
-    
+
+    // Do NOT set gameState to "playing" yet — wait for server's startGame message
   };
 
   const handleExit = () => {
     setGameState("menu");
     setPlayers([]);
     setIsConnected(false);
+    setLocalPlayerId(null);
+    setPlayerNamesInput([]);
     if (wsInstance) {
       wsInstance.close();
       setWsInstance(null);
@@ -119,7 +141,6 @@ function Root() {
     avatar: index === 0 ? "/images/mario.png" : "/images/waluigi.png",
   }));
 
-
   return (
     <StrictMode>
       <div className="container">
@@ -134,7 +155,11 @@ function Root() {
           />
         )}
         {gameState === "gameSelection" && (
-          <GameSel players={players} setGameSel={handleGameSelect} onExit={handleExit} />
+          <GameSel
+            players={players}
+            setGameSel={handleGameSelect}
+            onExit={handleExit}
+          />
         )}
         {gameState === "playing" && (
           <RhythmGame
