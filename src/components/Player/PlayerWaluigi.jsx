@@ -10,7 +10,7 @@ const MODELS = {
   WaluigiJump: { path: "/models/WaluigiJump.glb", scale: 0.003 },
   WaluigiSideStep: { path: "/models/WaluigiLeftStep.glb", scale: 0.003 },
   WaluigiRightSideStep: { path: "/models/WaluigiRightStep.glb", scale: 0.003 },
-  WaluigiBackFlip: { path: "/models/WaluigiBackFlip.glb", scale: 0.003 },
+  WaluigiBackFlip: { path: "/models/WaluigiBackflip.glb", scale: 0.003 },
 };
 
 const PlayerWaluigi = ({
@@ -45,7 +45,6 @@ const PlayerWaluigi = ({
     Space: false,
   });
 
-  // Expose player's mesh externally
   useEffect(() => {
     if (playerRef) {
       playerRef.current = groupRef.current;
@@ -90,7 +89,6 @@ const PlayerWaluigi = ({
     };
   }, [isPlayerPlayer]);
 
-  // Load models + animations
   const modelData = MODELS[currentModel];
   const { scene } = useGLTF(modelData.path);
 
@@ -106,12 +104,11 @@ const PlayerWaluigi = ({
   const { actions: sideStepActions } = useAnimations(sideStepAnimations, groupRef);
   const { actions: rightSideStepActions } = useAnimations(rightSideStepAnimations, groupRef);
 
-  // Movement & Animation
   useFrame((_, delta) => {
     if (!groupRef.current) return;
     let didMove = false;
 
-    // FPGA Jump (if not already jumping)
+    // FPGA Jump 
     if (jumpLow && !jumpTriggeredRef.current && !isJumping.current) {
       jumpTriggeredRef.current = true;
       isJumping.current = true;
@@ -147,7 +144,7 @@ const PlayerWaluigi = ({
       }
     }
 
-    // Local keyboard movement (if enabled)
+    // Local keyboard movement 
     if (isPlayerPlayer && !disableLateralMovement) {
       if (keys.current.ArrowLeft) {
         groupRef.current.position.x -= speed;

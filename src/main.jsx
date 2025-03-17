@@ -7,12 +7,12 @@ import Scoreboard from "./pages/RythmGame/Scoreboard.jsx";
 
 function Root() {
   const [players, setPlayers] = useState([]);
-  const [gameState, setGameState] = useState("menu"); // 'menu', 'gameSelection', 'playing'
+  const [gameState, setGameState] = useState("menu"); 
   const [selectedGame, setSelectedGame] = useState("");
   const [scores, setScores] = useState([]);
   const [wsInstance, setWsInstance] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
-  const [hasSelectedGame, setHasSelectedGame] = useState(false); // prevent multiple sends
+  const [hasSelectedGame, setHasSelectedGame] = useState(false); 
 
   const updateScore = (playerIndex, points) => {
     setScores((prevScores) => {
@@ -83,22 +83,21 @@ function Root() {
 
   const handleGameSelect = (selectedGameName) => {
     if (hasSelectedGame || !wsInstance || wsInstance.readyState !== WebSocket.OPEN) {
-      return; // prevent multiple sends or if not ready
+      return; 
     }
 
     console.log("Sending game selection:", selectedGameName);
-    setHasSelectedGame(true); // block further selections
+    setHasSelectedGame(true); 
 
     wsInstance.send(
       JSON.stringify({
         type: "game_selection",
         mode: selectedGameName,
-        player: 1, // arbitrary, since server only needs to act on first
+        player: 1,
       })
     );
 
-    setSelectedGame(selectedGameName); // optional local display
-    // Wait for server to trigger "startGame" before transitioning state
+    setSelectedGame(selectedGameName);
   };
 
   const handleExit = () => {
@@ -116,7 +115,7 @@ function Root() {
 
   const handleMinigameExit = () => {
     setGameState("gameSelection");
-    setHasSelectedGame(false); // allow re-selection after game
+    setHasSelectedGame(false); 
   };
 
   const showScoreboard = (gameState === "playing" || gameState === "gameSelection") && scores.length > 0;

@@ -41,8 +41,6 @@ def handle_game_selection_message(data, game_manager):
     }
 
 
-
-
 def handle_player_position_message(data, game_manager):
     print(f"Received player position message: {data}")  # Debugging: Check what data is received
     game_manager.player_positions[data["player"]] = data["position"]
