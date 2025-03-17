@@ -8,8 +8,8 @@ import { playJumpSound } from "../Sounds/Sounds.jsx";
 const MODELS = {
   WaluigiIdle: { path: "/models/WaluigiIdle.glb", scale: 0.003 },
   WaluigiJump: { path: "/models/WaluigiJump.glb", scale: 0.003 },
-  WaluigiSideStep: { path: "/models/WaluigiLeftStep.glb", scale: 0.003 },
-  WaluigiRightSideStep: { path: "/models/WaluigiRightStep.glb", scale: 0.003 },
+  WaluigiSideStep: { path: "/models/WaluigiSideStep.glb", scale: 0.003 },
+  WaluigiRightSideStep: { path: "/models/WaluigiRightSideStep.glb", scale: 0.003 },
   WaluigiBackFlip: { path: "/models/WaluigiBackflip.glb", scale: 0.003 },
 };
 
