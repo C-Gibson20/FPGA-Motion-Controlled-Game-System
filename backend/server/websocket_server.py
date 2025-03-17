@@ -28,48 +28,18 @@ def handle_init_message(data, game_manager, ws):
 
 
 def handle_game_selection_message(data, game_manager):
-    print(f"Received game selection message: {data}")
-    
-    player = data.get("player")  # identify the player (should be sent from client)
-    mode = data.get("mode")
-    
-    if not player:
-        print("Missing player ID in game selection")
-        return {"type": "error", "message": "Missing player ID"}
+    print(f"Received game selection message from player {data.get('player')}: {data}")
 
-    # Store the vote
-    game_manager.selection_votes[player] = mode
+    game_manager.mode = data["mode"]
+    game_manager.start_time = time.time()
+    game_manager.objects.clear()
 
-    # Check if all expected players voted
-    if len(game_manager.selection_votes) >= game_manager.config["numPlayers"]:
-        selected_modes = list(game_manager.selection_votes.values())
-        if all(game == selected_modes[0] for game in selected_modes):
-            # All selected the same game
-            game_manager.mode = selected_modes[0]
-            game_manager.start_time = time.time()
-            game_manager.objects.clear()
+    return {
+        "type": "startGame",
+        "mode": game_manager.mode,
+        "startAt": game_manager.start_time,
+    }
 
-            start_message = {
-                "type": "startGame",
-                "mode": game_manager.mode,
-                "startAt": game_manager.start_time,
-            }
-
-            # Clear votes after use
-            game_manager.selection_votes.clear()
-
-            # Broadcast to all clients
-            return start_message
-        else:
-            # Mismatched game selections
-            print("Players selected different games")
-            game_manager.selection_votes.clear()
-            return {
-                "type": "game_selection_error",
-                "message": "All players must select the same game."
-            }
-
-    return None  # Wait for more players to vote
 
 
 

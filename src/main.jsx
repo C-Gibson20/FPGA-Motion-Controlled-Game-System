@@ -98,8 +98,10 @@ function Root() {
   };
 
   const handleGameSelect = (selectedGameName) => {
-    if (wsInstance && wsInstance.readyState === WebSocket.OPEN && localPlayerId !== null) {
-      console.log("Sending game selection message to server");
+    const isPlayerOne = localPlayerId === 1;
+  
+    if (wsInstance && wsInstance.readyState === WebSocket.OPEN && isPlayerOne) {
+      console.log("Player 1 is selecting the game:", selectedGameName);
       wsInstance.send(
         JSON.stringify({
           type: "game_selection",
@@ -108,14 +110,13 @@ function Root() {
         })
       );
     } else {
-      console.warn("WebSocket not ready or localPlayerId not set");
+      console.log("Waiting for Player 1 to select the game.");
     }
-
-    console.log("Game selected locally:", selectedGameName);
-    setSelectedGame(selectedGameName);
-
-    // Do NOT set gameState to "playing" yet — wait for server's startGame message
+  
+    setSelectedGame(selectedGameName); // local display
+    // DO NOT change gameState here — wait for server to confirm
   };
+  
 
   const handleExit = () => {
     setGameState("menu");
