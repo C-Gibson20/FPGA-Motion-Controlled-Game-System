@@ -1,5 +1,5 @@
 import React from "react";
-import "./Scoreboard.css";
+import "./ScoreBoard.css";
 
 const Scoreboard = ({ players = [] }) => {
   console.log("🏆 Scoreboard:", players);
