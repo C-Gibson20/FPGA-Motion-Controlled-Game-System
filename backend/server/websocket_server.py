@@ -41,7 +41,7 @@ def handle_game_selection_message(data, game_manager):
     game_manager.selection_votes[player] = mode
 
     # Check if all expected players voted
-    if len(game_manager.selection_votes) >= game_manager.config["num_players"]:
+    if len(game_manager.selection_votes) >= game_manager.config["numPlayers"]:
         selected_modes = list(game_manager.selection_votes.values())
         if all(game == selected_modes[0] for game in selected_modes):
             # All selected the same game
