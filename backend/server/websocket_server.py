@@ -27,7 +27,7 @@ def handle_init_message(data, game_manager, ws):
     return {"type": "react_player_connected", "name": name}
 
 
-def handle_game_selection_message(data, game_manager, ws):
+def handle_game_selection_message(data, game_manager):
     print(f"Received game selection message: {data}")
     
     player = data.get("player")  # identify the player (should be sent from client)
