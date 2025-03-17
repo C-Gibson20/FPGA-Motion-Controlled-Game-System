@@ -2,65 +2,73 @@ import React, { useRef, useEffect, useState } from "react";
 import { useGLTF, useAnimations } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
-import {playJumpSound} from "../Sounds/Sounds.jsx";
+import { playJumpSound } from "../Sounds/Sounds.jsx";
 
+// Models and their paths
 const MODELS = {
-  WaluigiIdle: { path: "/models/WaluigiIdle.glb", scale: 0.004 },
-  WaluigiJump: { path: "/models/WaluigiJump.glb", scale: 0.004 },
-  WaluigiSideStep: { path: "/models/WaluigiSideStep.glb", scale: 0.004 },
-  WaluigiBackFlip: { path: "/models/WaluigiBackflip.glb", scale: 0.004 },
-  WaluigiRightSideStep: { path: "/models/WaluigiRightStep.glb", scale: 0.004 },
+  WaluigiIdle: { path: "/models/WaluigiIdle.glb", scale: 0.003 },
+  WaluigiJump: { path: "/models/WaluigiJump.glb", scale: 0.003 },
+  WaluigiSideStep: { path: "/models/WaluigiLeftStep.glb", scale: 0.003 },
+  WaluigiRightSideStep: { path: "/models/WaluigiRightStep.glb", scale: 0.003 },
+  WaluigiBackFlip: { path: "/models/WaluigiBackFlip.glb", scale: 0.003 },
 };
 
-const PlayerWaluigi = ({ username, isPlayerPlayer, initialPosition, playerRef, jumpLow, left, right, still, click }) => {
+const PlayerWaluigi = ({
+  username,
+  isPlayerPlayer,
+  initialPosition,
+  playerRef,
+  click,       // FPGA backflip
+  jumpLow,     // FPGA jump
+  left,        // FPGA left movement
+  right,       // FPGA right movement
+  still,       // FPGA still state
+  disableLateralMovement = false,
+}) => {
   const [currentModel, setCurrentModel] = useState("WaluigiIdle");
+
   const groupRef = useRef();
   const activeAction = useRef(null);
-
-  // This ref tracks whether a jump has already been triggered.
-  const jumpTriggered = useRef(false);
+  const velocityY = useRef(0);
+  const isJumping = useRef(false);
+  const isBackFlipping = useRef(false);
+  const jumpTriggeredRef = useRef(false);
   const clickTriggeredRef = useRef(false);
 
-  // Forward group ref for external access.
+  const speed = 0.005;
+  const jumpStrength = 0.07;
+  const gravity = 0.9;
+
+  const keys = useRef({
+    ArrowLeft: false,
+    ArrowRight: false,
+    Space: false,
+  });
+
+  // Expose player's mesh externally
   useEffect(() => {
     if (playerRef) {
       playerRef.current = groupRef.current;
     }
   }, [playerRef]);
 
-  const modelData = MODELS[currentModel];
-  const { scene } = useGLTF(modelData.path);
-  const { animations: idleAnimations } = useGLTF(MODELS.WaluigiIdle.path);
-  const { animations: jumpAnimations } = useGLTF(MODELS.WaluigiJump.path);
-  const { animations: sideStepAnimations } = useGLTF(MODELS.WaluigiSideStep.path);
-  const { animations: rightSideStepAnimations } = useGLTF(MODELS.WaluigiRightSideStep.path);
-  const { animations: backFlipAnimations } = useGLTF(MODELS.WaluigiBackFlip.path);
+  useEffect(() => {
+    const debugKeyLogger = (e) => {
+      console.log("KEY PRESSED:", e.key);
+    };
+  
+    window.addEventListener("keydown", debugKeyLogger);
+    return () => window.removeEventListener("keydown", debugKeyLogger);
+  }, []);
+  
 
-  const { actions: idleActions } = useAnimations(idleAnimations, groupRef);
-  const { actions: jumpActions } = useAnimations(jumpAnimations, groupRef);
-  const { actions: sideStepActions } = useAnimations(sideStepAnimations, groupRef);
-  const { actions: rightSideStepActions } = useAnimations(rightSideStepAnimations, groupRef);
-  const { actions: backFlipActions } = useAnimations(backFlipAnimations, groupRef);
-
-  const velocityY = useRef(0);
-  const speed = 0.005;
-  const jumpStrength = 0.07;
-  const gravity = 0.9;
-  const isJumping = useRef(false);
-  const isBackFlipping = useRef(false);
-  const keys = useRef({
-    ArrowUp: false,
-    ArrowDown: false,
-    ArrowLeft: false,
-    ArrowRight: false,
-    Space: false,
-  });
-
-  // Keyboard controls for local player.
+  // Key press listener (only for local player)
   useEffect(() => {
     if (!isPlayerPlayer) return;
+
     const handleKeyDown = (e) => {
-      if (keys.current[e.key] !== undefined) keys.current[e.key] = true;
+      if (keys.current.hasOwnProperty(e.key)) keys.current[e.key] = true;
+
       if (e.key === " " && !isJumping.current) {
         isJumping.current = true;
         velocityY.current = jumpStrength;
@@ -68,76 +76,101 @@ const PlayerWaluigi = ({ username, isPlayerPlayer, initialPosition, playerRef, j
         playJumpSound();
       }
     };
+
     const handleKeyUp = (e) => {
-      if (keys.current[e.key] !== undefined) keys.current[e.key] = false;
+      if (keys.current.hasOwnProperty(e.key)) keys.current[e.key] = false;
     };
+
     window.addEventListener("keydown", handleKeyDown);
     window.addEventListener("keyup", handleKeyUp);
+
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
     };
   }, [isPlayerPlayer]);
 
+  // Load models + animations
+  const modelData = MODELS[currentModel];
+  const { scene } = useGLTF(modelData.path);
+
+  const { animations: idleAnimations } = useGLTF(MODELS.WaluigiIdle.path);
+  const { animations: jumpAnimations } = useGLTF(MODELS.WaluigiJump.path);
+  const { animations: clickAnimations } = useGLTF(MODELS.WaluigiBackFlip.path);
+  const { animations: sideStepAnimations } = useGLTF(MODELS.WaluigiSideStep.path);
+  const { animations: rightSideStepAnimations } = useGLTF(MODELS.WaluigiRightSideStep.path);
+
+  const { actions: idleActions } = useAnimations(idleAnimations, groupRef);
+  const { actions: jumpActions } = useAnimations(jumpAnimations, groupRef);
+  const { actions: clickActions } = useAnimations(clickAnimations, groupRef);
+  const { actions: sideStepActions } = useAnimations(sideStepAnimations, groupRef);
+  const { actions: rightSideStepActions } = useAnimations(rightSideStepAnimations, groupRef);
+
+  // Movement & Animation
   useFrame((_, delta) => {
     if (!groupRef.current) return;
     let didMove = false;
-    
-    // FPGA controls first: Trigger jump only once on the rising edge.
-    if (jumpLow && !jumpTriggered.current && !isJumping.current) {
-      jumpTriggered.current = true;
+
+    // FPGA Jump (if not already jumping)
+    if (jumpLow && !jumpTriggeredRef.current && !isJumping.current) {
+      jumpTriggeredRef.current = true;
       isJumping.current = true;
       velocityY.current = jumpStrength;
       setCurrentModel("WaluigiJump");
       playJumpSound();
+    } else if (!jumpLow) {
+      jumpTriggeredRef.current = false;
     }
-    if (!jumpLow) {
-      // Reset jump trigger once FPGA flag is off.
-      jumpTriggered.current = false;
-    }
-    if (click) {
-      // Only trigger jump once when click becomes true.
-      if (!clickTriggeredRef.current && !isBackFlipping.current) {
-        clickTriggeredRef.current = true;
-        isBackFlipping.current = true;
-        velocityY.current = jumpStrength;
-        if (currentModel !== "WaluigiBackFlip") setCurrentModel("WaluigiBackFlip");
-        playJumpSound();
-      }
-    } else {
-      // Reset our trigger when jumpLow is false.
+
+    // FPGA Backflip
+    if (click && !clickTriggeredRef.current && !isBackFlipping.current) {
+      clickTriggeredRef.current = true;
+      isBackFlipping.current = true;
+      velocityY.current = jumpStrength;
+      setCurrentModel("WaluigiBackFlip");
+      playJumpSound();
+    } else if (!click) {
       clickTriggeredRef.current = false;
     }
-      
-    if (left) {
-      groupRef.current.position.x -= speed;
-      if (currentModel !== "WaluigiSideStep") setCurrentModel("WaluigiSideStep");
-      didMove = true;
+
+    // FPGA Lateral movement
+    if (!disableLateralMovement) {
+      if (left) {
+        groupRef.current.position.x -= speed;
+        setCurrentModel("WaluigiSideStep");
+        didMove = true;
+      }
+      if (right) {
+        groupRef.current.position.x += speed;
+        setCurrentModel("WaluigiRightSideStep");
+        didMove = true;
+      }
     }
-    if (right) {
-      groupRef.current.position.x += speed;
-      if (currentModel !== "WaluigiRightSideStep") setCurrentModel("WaluigiRightSideStep");
-      didMove = true;
-    }
-    if (still && !didMove && !isJumping.current && !isBackFlipping.current && currentModel !== "WaluigiIdle") {
-      setCurrentModel("WaluigiIdle");
-    }
-    // Then apply keyboard controls (if local).
-    if (isPlayerPlayer) {
+
+    // Local keyboard movement (if enabled)
+    if (isPlayerPlayer && !disableLateralMovement) {
       if (keys.current.ArrowLeft) {
         groupRef.current.position.x -= speed;
-        if (currentModel !== "WaluigiSideStep") setCurrentModel("WaluigiSideStep");
+        setCurrentModel("WaluigiSideStep");
         didMove = true;
       }
       if (keys.current.ArrowRight) {
         groupRef.current.position.x += speed;
-        if (currentModel !== "WaluigiRightSideStep") setCurrentModel("WaluigiRightSideStep");
+        setCurrentModel("WaluigiRightSideStep");
         didMove = true;
       }
     }
+
+    // Set idle if not moving or jumping
+    if (!didMove && !isJumping.current && !isBackFlipping.current && currentModel !== "WaluigiIdle") {
+      setCurrentModel("WaluigiIdle");
+    }
+
+    // Handle jump arc
     if (isJumping.current) {
       groupRef.current.position.y += velocityY.current;
-      velocityY.current -= 0.3 * gravity * delta;
+      velocityY.current -= 0.3 * delta * gravity;
+
       if (groupRef.current.position.y <= initialPosition[1]) {
         groupRef.current.position.y = initialPosition[1];
         isJumping.current = false;
@@ -147,47 +180,45 @@ const PlayerWaluigi = ({ username, isPlayerPlayer, initialPosition, playerRef, j
     }
   });
 
+  // Handle animation switching
   useEffect(() => {
-    // Fade out the previous animation.
     if (activeAction.current) {
       activeAction.current.fadeOut(0.2);
     }
-    let action;
+
+    let action = null;
+
     if (currentModel === "WaluigiIdle") {
       action = idleActions["mixamo.com"] || Object.values(idleActions)[0];
+      action?.setLoop(THREE.LoopRepeat, Infinity);
     } else if (currentModel === "WaluigiJump") {
       action = jumpActions["mixamo.com"] || Object.values(jumpActions)[0];
-      if (action) {
-        action.setLoop(THREE.LoopOnce, 1);
-        action.clampWhenFinished = true;
-      }
+      action?.setLoop(THREE.LoopOnce, 1);
+      action.clampWhenFinished = true;
     } else if (currentModel === "WaluigiBackFlip") {
-          action = backFlipActions["mixamo.com"] || Object.values(backFlipActions)[0];
-          if (action) {
-            action.setLoop(THREE.LoopOnce, 1);
-            action.clampWhenFinished = true;
-            action.reset().fadeIn(0.2).play();
-        
-            // Use the animation clip's duration to schedule the reset.
-            const clipDuration = action.getClip().duration;
-            setTimeout(() => {
-              isBackFlipping.current = false;
-              setCurrentModel("WaluigiIdle"); // Reset to idle so new clicks trigger backflip
-            }, clipDuration * 1000);
-          }
-        }
-    else if (currentModel === "WaluigiSideStep") {
+      action = clickActions["mixamo.com"] || Object.values(clickActions)[0];
+      action?.setLoop(THREE.LoopOnce, 1);
+      action.clampWhenFinished = true;
+      action.reset().fadeIn(0.2).play();
+
+      const duration = action.getClip().duration;
+      setTimeout(() => {
+        isBackFlipping.current = false;
+        setCurrentModel("WaluigiIdle");
+      }, duration * 1000);
+    } else if (currentModel === "WaluigiSideStep") {
       action = sideStepActions["mixamo.com"] || Object.values(sideStepActions)[0];
-      if (action) action.setLoop(THREE.LoopRepeat, Infinity);
+      action?.setLoop(THREE.LoopRepeat, Infinity);
     } else if (currentModel === "WaluigiRightSideStep") {
       action = rightSideStepActions["mixamo.com"] || Object.values(rightSideStepActions)[0];
-      if (action) action.setLoop(THREE.LoopRepeat, Infinity);
+      action?.setLoop(THREE.LoopRepeat, Infinity);
     }
+
     if (action) {
       action.reset().fadeIn(0.2).play();
       activeAction.current = action;
     }
-  }, [currentModel, idleActions, jumpActions, sideStepActions, rightSideStepActions]);
+  }, [currentModel, idleActions, jumpActions, clickActions, sideStepActions, rightSideStepActions]);
 
   return (
     <group ref={groupRef} position={initialPosition}>
@@ -199,7 +230,7 @@ const PlayerWaluigi = ({ username, isPlayerPlayer, initialPosition, playerRef, j
           self.layers.enable(1);
         }}
       />
-      <primitive object={scene} scale={MODELS[currentModel].scale} />
+      <primitive object={scene} scale={modelData.scale} />
     </group>
   );
 };
