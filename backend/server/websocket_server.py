@@ -27,16 +27,50 @@ def handle_init_message(data, game_manager, ws):
     return {"type": "react_player_connected", "name": name}
 
 
-def handle_game_selection_message(data, game_manager):
-    print(f"Received game selection message: {data}")  # Debugging: Check what data is received
-    game_manager.mode = data["mode"]
-    game_manager.start_time = time.time()
-    game_manager.objects.clear()
-    return {
-        "type": "startGame",
-        "mode": game_manager.mode,
-        "startAt": game_manager.start_time
-    }
+def handle_game_selection_message(data, game_manager, ws):
+    print(f"Received game selection message: {data}")
+    
+    player = data.get("player")  # identify the player (should be sent from client)
+    mode = data.get("mode")
+    
+    if not player:
+        print("Missing player ID in game selection")
+        return {"type": "error", "message": "Missing player ID"}
+
+    # Store the vote
+    game_manager.selection_votes[player] = mode
+
+    # Check if all expected players voted
+    if len(game_manager.selection_votes) >= game_manager.num_players:
+        selected_modes = list(game_manager.selection_votes.values())
+        if all(game == selected_modes[0] for game in selected_modes):
+            # All selected the same game
+            game_manager.mode = selected_modes[0]
+            game_manager.start_time = time.time()
+            game_manager.objects.clear()
+
+            start_message = {
+                "type": "startGame",
+                "mode": game_manager.mode,
+                "startAt": game_manager.start_time,
+            }
+
+            # Clear votes after use
+            game_manager.selection_votes.clear()
+
+            # Broadcast to all clients
+            return start_message
+        else:
+            # Mismatched game selections
+            print("Players selected different games")
+            game_manager.selection_votes.clear()
+            return {
+                "type": "game_selection_error",
+                "message": "All players must select the same game."
+            }
+
+    return None  # Wait for more players to vote
+
 
 
 def handle_player_position_message(data, game_manager):

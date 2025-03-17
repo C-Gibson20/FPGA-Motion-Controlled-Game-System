@@ -15,6 +15,7 @@ class GameManager:
         self.player_positions = {}
         self.player_scores = {}
         self.player_input_queue = []
+        self.selection_votes = {}
 
     def update_config(self, num_players, names):
         """ Update the game configuration """

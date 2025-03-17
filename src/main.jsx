@@ -14,6 +14,7 @@ function Root() {
   const [scores, setScores] = useState([]);
   const [wsInstance, setWsInstance] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
+  const [gameVotes, setGameVotes] = useState({});
   
   const updateScore = (playerIndex, points) => {
     setScores((prevScores) => {
@@ -52,7 +53,10 @@ function Root() {
         } else if (data.type === "all_connected") {
           console.log("All players are connected!");
           setGameState("gameSelection");
+        } else if (data.type === "game_selection_error") {
+          alert(data.message);
         }
+        
       } catch (err) {
         console.error("Error parsing WebSocket message:", err);
       }
@@ -77,18 +81,20 @@ function Root() {
   };
 
   const handleGameSelect = (selectedGameName) => {
-    console.log("Game selected:", selectedGameName);
-    setSelectedGame(selectedGameName);
-    setGameState("playing");
     if (wsInstance && wsInstance.readyState === WebSocket.OPEN) {
       console.log("Sending game selection message to server");
       wsInstance.send(
         JSON.stringify({
           type: "game_selection",
+          player: players[0].id,
           mode: selectedGameName,
         })
       );
     }
+    console.log("Game selected:", selectedGameName);
+    setSelectedGame(selectedGameName);
+    setGameState("playing");
+    
   };
 
   const handleExit = () => {
