@@ -18,7 +18,7 @@ async def broadcast(data):
 
 
 def handle_init_message(data, game_manager, ws):
-    print(f"Received init message: {data}")  # Debugging: Check what data is received
+    # print(f"Received init message: {data}")  # Debugging: Check what data is received
 
     # Using the GameManager's method to update the config
     game_manager.update_config(data.get("numPlayers", 1), data.get("names", []))
@@ -28,7 +28,7 @@ def handle_init_message(data, game_manager, ws):
 
 
 def handle_game_selection_message(data, game_manager):
-    print(f"Received game selection message from player {data.get('player')}: {data}")
+    # print(f"Received game selection message from player {data.get('player')}: {data}")
 
     game_manager.mode = data["mode"]
     game_manager.start_time = time.time()
@@ -42,7 +42,7 @@ def handle_game_selection_message(data, game_manager):
 
 
 def handle_player_position_message(data, game_manager):
-    print(f"Received player position message: {data}")  # Debugging: Check what data is received
+    # print(f"Received player position message: {data}")  # Debugging: Check what data is received
     pos = data["position"]
     sent_at = data.get("sentAt")
     game_manager.player_positions[data["player"]] = {
@@ -54,7 +54,7 @@ def handle_player_position_message(data, game_manager):
 
 
 def handle_player_input_message(data, game_manager):
-    print(f"Received player input message: {data}")  # Debugging: Check what data is received
+    # print(f"Received player input message: {data}")  # Debugging: Check what data is received
     game_manager.player_input_queue.append({
         "player": data["player"],
         "action": data["action"],
@@ -64,13 +64,13 @@ def handle_player_input_message(data, game_manager):
 
 
 def handle_get_scores_message():
-    print("Received get scores message")  # Debugging: Check if message is received
+    # print("Received get scores message")  # Debugging: Check if message is received
     return {"type": "score_data", "scores": get_scores()}
 
 
 async def handle_message(data, game_manager, ws):
     msg_type = data.get("type")
-    print(f"Received message type: {msg_type}, data: {data}")  # Debugging
+    # print(f"Received message type: {msg_type}, data: {data}")  # Debugging
 
     if msg_type == "init":
         return handle_init_message(data, game_manager, ws)

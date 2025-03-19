@@ -14,13 +14,14 @@ const GAMES = {
 };
 
 // --- Helper: Parse FPGA Control Data ---
-const parseFpgaControl = (data) => {
+const parseFpgaControl = (data, timestamp) => {
   const controls = {
     jump: false,
     left: false,
     right: false,
     still: false,
     click: false,
+    latencyStartTime: timestamp,
   };
 
   switch (data) {
@@ -46,8 +47,6 @@ const parseFpgaControl = (data) => {
 
   return controls;
 };
-
-const [latencyStartTime, setLatencyStartTime] = useState(null);
 
 const useWebSocket = ({
   ws,
@@ -79,8 +78,13 @@ const useWebSocket = ({
       }
 
       if (payload.type === "data") {
-        setLatencyStartTime(performance.now());
-        const controls = parseFpgaControl(payload.data);
+        const now = performance.now();
+
+        const controls = parseFpgaControl(payload.data, now);
+        if (payload.data !== "N" && setLatencyStartTime) {
+          setLatencyStartTime(now); // ✅ Only when there's movement
+        }
+        // const controls = parseFpgaControl(payload.data);
         setFpgaControls((prev) => ({
           ...prev,
           [payload.player]: controls,
@@ -117,6 +121,8 @@ const useWebSocket = ({
 const RhythmGame = ({ gameSel, players = [], scores, onScoreIncrement, ws, onExit }) => {
   const [fpgaControls, setFpgaControls] = useState({});
   const [gameObjects, setGameObjects] = useState([]);
+  const [latencyStartTime, setLatencyStartTime] = useState(null);
+
 
   useWebSocket({
     ws,
@@ -125,6 +131,7 @@ const RhythmGame = ({ gameSel, players = [], scores, onScoreIncrement, ws, onExi
     onScoreIncrement,
     setFpgaControls,
     setGameObjects,
+    setLatencyStartTime
   });
 
   const SelectedGame = GAMES[gameSel];

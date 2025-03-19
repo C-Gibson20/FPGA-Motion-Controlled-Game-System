@@ -216,15 +216,17 @@ const PlayerMario = ({
       const now = performance.now();
 
       requestAnimationFrame(() => {
-        const renderedAt = performance.now();
-        const latency = renderedAt - latencyStartTime;
-        console.log(`[RENDER LATENCY] ${currentModel} rendered after ${latency.toFixed(2)} ms`);
+        const renderTime = performance.now();
+        if (latencyStartTime) {
+          const latency = renderTime - latencyStartTime;
+          console.log(`[RENDER LATENCY] Animation rendered after ${latency.toFixed(2)} ms`);
+        }
       });
       
       action.reset().fadeIn(0.2).play();
       activeAction.current = action;
     }
-  }, [currentModel, idleActions, jumpActions, clickActions, sideStepActions, rightSideStepActions]);
+  }, [currentModel, idleActions, jumpActions, clickActions, sideStepActions, rightSideStepActions, latencyStartTime]);
 
   return (
     <group ref={groupRef} position={initialPosition}>
