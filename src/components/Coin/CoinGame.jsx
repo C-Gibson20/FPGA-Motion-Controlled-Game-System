@@ -15,7 +15,8 @@ const ReportPosition = ({ playerRef, playerIndex, ws }) => {
         ws.send(JSON.stringify({
           type: "player_position",
           player: playerIndex + 1,
-          position: { x: pos.x, y: pos.y }
+          position: { x: pos.x, y: pos.y },
+          sentAt: performance.now(),
         }));
       }
     }, 100); 
@@ -31,6 +32,7 @@ const CoinGame = ({
   localPlayerName = "Mario",
   ws,
   gameObjects = [],
+  latencyStartTime,
 }) => {
   const processedPlayers = players.map((p) =>
     typeof p === "string" ? { username: p } : p
@@ -69,6 +71,7 @@ const CoinGame = ({
         right={control.right}
         still={control.still}
         playerRef={controlledPlayerRefs.current[index]}
+        latencyStartTime={latencyStartTime}
       />
       <ReportPosition 
         playerRef={controlledPlayerRefs.current[index]} 

@@ -43,7 +43,13 @@ def handle_game_selection_message(data, game_manager):
 
 def handle_player_position_message(data, game_manager):
     print(f"Received player position message: {data}")  # Debugging: Check what data is received
-    game_manager.player_positions[data["player"]] = data["position"]
+    pos = data["position"]
+    sent_at = data.get("sentAt")
+    game_manager.player_positions[data["player"]] = {
+        "x": pos["x"],
+        "y": pos["y"],
+        "sentAt": sent_at
+    }
     return None
 
 

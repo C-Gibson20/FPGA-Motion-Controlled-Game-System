@@ -23,6 +23,7 @@ const PlayerMario = ({
   left,        // FPGA left movement
   right,       // FPGA right movement
   still,       // FPGA still state
+  latencyStartTime,
   disableLateralMovement = false,
 }) => {
   const [currentModel, setCurrentModel] = useState("MarioIdle");
@@ -212,6 +213,14 @@ const PlayerMario = ({
     }
 
     if (action) {
+      const now = performance.now();
+
+      requestAnimationFrame(() => {
+        const renderedAt = performance.now();
+        const latency = renderedAt - latencyStartTime;
+        console.log(`[RENDER LATENCY] ${currentModel} rendered after ${latency.toFixed(2)} ms`);
+      });
+      
       action.reset().fadeIn(0.2).play();
       activeAction.current = action;
     }

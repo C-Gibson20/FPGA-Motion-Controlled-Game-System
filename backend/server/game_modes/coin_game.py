@@ -1,5 +1,6 @@
 import random
 import uuid
+import time
 from utils import distance
 
 
@@ -26,6 +27,12 @@ def coin_collection(coin_pos, game_manager):
     for pid, pos in game_manager.player_positions.items():
         if distance(coin_pos, (pos["x"], pos["y"])) < 0.3:
             game_manager.sync_score(pid)
+
+            if pos.get("sentAt"):
+                server_time = time.time() * 1000  # ms
+                latency = server_time - pos["sentAt"]
+                print(f"[Latency #2] Player {pid} | Coin collected | Latency: {latency:.2f} ms")
+
             return True
     return False
 

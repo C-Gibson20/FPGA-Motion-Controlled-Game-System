@@ -47,6 +47,8 @@ const parseFpgaControl = (data) => {
   return controls;
 };
 
+const [latencyStartTime, setLatencyStartTime] = useState(null);
+
 const useWebSocket = ({
   ws,
   players,
@@ -54,6 +56,7 @@ const useWebSocket = ({
   onScoreIncrement,
   setFpgaControls,
   setGameObjects,
+  setLatencyStartTime
 }) => {
   const latestScoresRef = useRef(scores);
 
@@ -76,6 +79,7 @@ const useWebSocket = ({
       }
 
       if (payload.type === "data") {
+        setLatencyStartTime(performance.now());
         const controls = parseFpgaControl(payload.data);
         setFpgaControls((prev) => ({
           ...prev,
@@ -136,6 +140,7 @@ const RhythmGame = ({ gameSel, players = [], scores, onScoreIncrement, ws, onExi
           onScoreIncrement={onScoreIncrement}
           localPlayerName={players[0]}
           ws={ws}
+          latencyStartTime={latencyStartTime}
         />
       ) : (
         <div style={{ color: "white", textAlign: "center", marginTop: "20px" }}>
