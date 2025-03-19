@@ -76,7 +76,7 @@ async def handle_fpga_client(conn, player_id):
                 print(f"FPGA connection for player {player_id} closed.")
                 break
             message = data.decode().strip()
-            print(f"Received data from player {player_id}: {message}")
+            # print(f"Received data from player {player_id}: {message}")
 
             # Process received message from FPGA
             payload = {
